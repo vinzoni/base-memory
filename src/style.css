@@ -96,6 +96,75 @@ code {
   box-sizing: border-box;
 }
 
+.config-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 32px 20px;
+  flex-grow: 1;
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.config-screen__bases {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  text-align: left;
+
+  legend {
+    padding: 0 6px;
+    font-weight: 600;
+    color: var(--text-h);
+  }
+}
+
+.config-screen__option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+}
+
+.config-screen__option input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.config-screen__status {
+  min-height: 44px;
+  font-size: 15px;
+}
+
+.config-screen__start {
+  font: inherit;
+  font-weight: 600;
+  padding: 10px 28px;
+  border: 2px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent);
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+}
+
 .game-screen {
   display: flex;
   flex-direction: column;
