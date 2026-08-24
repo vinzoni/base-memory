@@ -1,7 +1,7 @@
 import { getRemainingSeconds } from '../core/gameEngine.js';
 import { UI_TIMING } from '../config.js';
 
-function formatTime(totalSeconds) {
+export function formatTime(totalSeconds) {
   const minutes = Math.floor(totalSeconds / 60);
   const seconds = totalSeconds % 60;
   return `${minutes}:${String(seconds).padStart(2, '0')}`;

@@ -41,7 +41,7 @@ function buildStatusText(status) {
   return `${status.message} Con queste basi alcuni numeri si scrivono allo stesso modo e non formano coppie valide.`;
 }
 
-export function renderConfigScreen(container, { level, onStart }) {
+export function renderConfigScreen(container, { level, onStart, onShowHighScores }) {
   const selectedBases = new Set(DEFAULT_SELECTED_BASES);
 
   const section = document.createElement('section');
@@ -95,6 +95,13 @@ export function renderConfigScreen(container, { level, onStart }) {
     onStart(BASE_ORDER.filter((baseId) => selectedBases.has(baseId)));
   });
   section.appendChild(startButton);
+
+  const highScoresButton = document.createElement('button');
+  highScoresButton.type = 'button';
+  highScoresButton.className = 'screen-secondary-button';
+  highScoresButton.textContent = 'Classifica';
+  highScoresButton.addEventListener('click', () => onShowHighScores());
+  section.appendChild(highScoresButton);
 
   function update() {
     const currentStatus = computeStatus(selectedBases, level);

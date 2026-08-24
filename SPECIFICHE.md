@@ -172,6 +172,14 @@ Requisiti minimi di qualità:
 - durante l'animazione di errore l'input è bloccato, per evitare doppi click che
   contano errori multipli.
 
+> **Limite noto (da rivedere):** `:root` dichiara `font: 18px/145%`, e una
+> `line-height` percentuale viene risolta in pixel ed ereditata come valore
+> fisso dai figli, non ricalcolata sulla loro `font-size`. Ogni elemento con
+> `font-size` diversa dal corpo del testo e senza una propria `line-height` è
+> quindi esposto allo stesso difetto già corretto su `h1` (titolo che si
+> sovrapponeva andando a capo). Sostituire `145%` con `1.45` risolverebbe alla
+> radice, ma va fatto rivedendo la spaziatura di tutte le schermate.
+
 ---
 
 ## 8. Fuori perimetro (prototipo)

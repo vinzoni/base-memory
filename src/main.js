@@ -4,6 +4,7 @@ import {
   acknowledgeMismatch,
   checkTimeout,
   createGame,
+  getElapsedSeconds,
   selectTile,
 } from './core/gameEngine.js';
 import { getLevelById } from './core/levels.js';
@@ -11,12 +12,33 @@ import { UI_TIMING } from './config.js';
 import { renderBoard } from './ui/board.js';
 import { renderHud } from './ui/hud.js';
 import { renderConfigScreen } from './ui/configScreen.js';
+import { renderSummaryScreen } from './ui/summaryScreen.js';
+import { renderHighScoresScreen } from './ui/highScoresScreen.js';
 import { createScreenManager } from './ui/screens.js';
+import {
+  addHighScore,
+  clearHighScores,
+  qualifiesForHighScore,
+  readHighScores,
+} from './storage/highScores.js';
 
 const level = getLevelById(1);
 const screens = createScreenManager(document.querySelector('#app'));
 
-function renderGameScreen(container, selectedBases) {
+// Unico punto dell'app che tocca localStorage: il resto del codice (schermate incluse)
+// riceve solo funzioni già legate allo storage o dati già letti.
+const storage = window.localStorage;
+function getHighScores() {
+  return readHighScores(storage);
+}
+function saveHighScore(entry) {
+  return addHighScore(storage, entry);
+}
+function resetHighScores() {
+  clearHighScores(storage);
+}
+
+function renderGameScreen(container, selectedBases, { onGameOver }) {
   container.innerHTML = `
     <main class="game-screen">
       <section id="hud" class="hud"></section>
@@ -43,6 +65,11 @@ function renderGameScreen(container, selectedBases) {
     renderFullBoard();
     renderHudNow();
 
+    if (state.status !== GAME_STATUS.PLAYING) {
+      onGameOver(state);
+      return;
+    }
+
     if (state.pendingMismatch) {
       setTimeout(() => {
         state = acknowledgeMismatch(state);
@@ -65,7 +92,10 @@ function renderGameScreen(container, selectedBases) {
       }
     }
     renderHudNow();
-    if (state.status !== GAME_STATUS.PLAYING) clearInterval(timerId);
+    if (state.status !== GAME_STATUS.PLAYING) {
+      clearInterval(timerId);
+      onGameOver(state);
+    }
   }, UI_TIMING.TIMER_TICK_INTERVAL_MS);
 
   renderFullBoard();
@@ -75,12 +105,67 @@ function renderGameScreen(container, selectedBases) {
 }
 
 function showGameScreen(selectedBases) {
-  screens.show((container) => renderGameScreen(container, selectedBases));
+  screens.show((container) =>
+    renderGameScreen(container, selectedBases, {
+      onGameOver: (state) => showSummaryScreen(selectedBases, state),
+    })
+  );
+}
+
+function showSummaryScreen(selectedBases, state) {
+  const currentScores = getHighScores();
+  const qualifies = qualifiesForHighScore(currentScores, state.score);
+
+  screens.show((container) =>
+    renderSummaryScreen(container, {
+      state,
+      qualifies,
+      onSaveScore: (playerName) => {
+        const entry = {
+          playerName,
+          score: state.score,
+          dateTime: new Date().toISOString(),
+          selectedBases,
+          levelReached: level.id,
+          timeTakenSeconds: getElapsedSeconds(state, Date.now()),
+        };
+        saveHighScore(entry);
+        // isValidEntry in storage/highScores.js scarta in silenzio le voci
+        // malformate: senza questa rilettura, un oggetto incompleto mostrerebbe
+        // comunque la conferma di salvataggio e sparirebbe alla lettura successiva.
+        return getHighScores().some(
+          (saved) =>
+            saved.playerName === entry.playerName &&
+            saved.score === entry.score &&
+            saved.dateTime === entry.dateTime
+        );
+      },
+      onPlayAgain: showConfigScreen,
+      onShowHighScores: showHighScoresScreen,
+    })
+  );
+}
+
+function showHighScoresScreen() {
+  screens.show((container) =>
+    renderHighScoresScreen(container, {
+      scores: getHighScores(),
+      onBack: showConfigScreen,
+      onClear: () => {
+        resetHighScores();
+        showHighScoresScreen();
+      },
+    })
+  );
 }
 
 function showConfigScreen() {
   screens.show((container) =>
-    renderConfigScreen(container, { level, onStart: showGameScreen })
+    renderConfigScreen(container, {
+      level,
+      onStart: showGameScreen,
+      onShowHighScores: showHighScoresScreen,
+    })
   );
 }
 
