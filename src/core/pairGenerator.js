@@ -1,10 +1,13 @@
-import { formatValueInBase } from './bases.js';
+import { BASES, formatValueInBase } from './bases.js';
 import { MIN_SELECTABLE_BASES } from '../config.js';
 
-function shuffle(items, random) {
+export function shuffle(items, random) {
   const shuffled = items.slice();
   for (let i = shuffled.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(random() * (i + 1));
+    // Math.min protegge da un random() che restituisce esattamente 1.0: senza
+    // clamp l'indice sforerebbe l'array, corrompendolo (buco undefined + lunghezza
+    // allungata) invece di limitarsi a un normale swap interno.
+    const j = Math.min(i, Math.floor(random() * (i + 1)));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
@@ -54,7 +57,20 @@ export function countUsableValues(valueRange, selectedBases) {
   ).length;
 }
 
+function assertValidSelectedBases(selectedBases) {
+  const uniqueBases = new Set(selectedBases);
+  if (uniqueBases.size !== selectedBases.length) {
+    throw new Error('Le basi selezionate contengono duplicati.');
+  }
+  const unknownBaseId = selectedBases.find((baseId) => !BASES[baseId]);
+  if (unknownBaseId !== undefined) {
+    throw new Error(`Base sconosciuta tra quelle selezionate: ${unknownBaseId}`);
+  }
+}
+
 export function generatePairs({ valueRange, maxPairCount }, selectedBases, random = Math.random) {
+  assertValidSelectedBases(selectedBases);
+
   if (selectedBases.length < MIN_SELECTABLE_BASES) {
     throw new Error(`Servono almeno ${MIN_SELECTABLE_BASES} basi selezionate.`);
   }

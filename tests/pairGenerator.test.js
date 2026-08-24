@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { countUsableValues, generatePairs } from '../src/core/pairGenerator.js';
+import { countUsableValues, generatePairs, shuffle } from '../src/core/pairGenerator.js';
 import { formatValueInBase } from '../src/core/bases.js';
 import { LEVELS } from '../src/core/levels.js';
 
@@ -33,6 +33,16 @@ describe('countUsableValues', () => {
     expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'BIN'])).toBe(14);
     expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'OCT'])).toBe(8);
     expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'HEX'])).toBe(6);
+  });
+});
+
+describe('shuffle', () => {
+  it('resta integro quando random() restituisce sempre 1 (indice massimo possibile)', () => {
+    const input = [1, 2, 3, 4, 5];
+    const result = shuffle(input, () => 1);
+    expect(result).toHaveLength(input.length);
+    expect(result.every((item) => item !== undefined)).toBe(true);
+    expect([...result].sort()).toEqual([...input].sort());
   });
 });
 
@@ -110,5 +120,13 @@ describe('generatePairs', () => {
   it('solleva un errore se il range non permette almeno 2 coppie', () => {
     const tinyLevel = { valueRange: { min: 0, max: 2 }, maxPairCount: 5 };
     expect(() => generatePairs(tinyLevel, ['DEC', 'BIN'], mulberry32(9))).toThrow();
+  });
+
+  it('solleva un errore se selectedBases contiene duplicati', () => {
+    expect(() => generatePairs(LEVEL_1, ['DEC', 'DEC'], mulberry32(10))).toThrow();
+  });
+
+  it('solleva un errore se selectedBases contiene una base sconosciuta', () => {
+    expect(() => generatePairs(LEVEL_1, ['DEC', 'ROMAN'], mulberry32(11))).toThrow();
   });
 });
