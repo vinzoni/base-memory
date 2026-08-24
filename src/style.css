@@ -130,14 +130,30 @@ code {
 }
 
 .board {
+  --board-columns: 4; /* fallback prima del primo render */
+  --board-max-columns: 6;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  grid-template-columns: repeat(min(var(--board-columns), var(--board-max-columns)), 1fr);
   gap: 12px;
   width: 100%;
   max-width: 640px;
 }
 
+@media (max-width: 640px) {
+  .board {
+    --board-max-columns: 3;
+  }
+}
+
+@media (max-width: 400px) {
+  .board {
+    --board-max-columns: 2;
+    gap: 8px;
+  }
+}
+
 .tile {
+  position: relative; /* per il badge di stato in overlay */
   aspect-ratio: 1;
   display: flex;
   flex-direction: column;
@@ -168,18 +184,29 @@ code {
 }
 
 .tile__base {
-  font-size: 11px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.06em;
-  padding: 2px 8px;
+  padding: 3px 9px;
   border-radius: 999px;
   background: var(--code-bg);
   color: var(--accent);
 }
 
 .tile__icon {
-  font-size: 14px;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
   line-height: 1;
+  color: #fff;
 }
 
 .tile--selected {
@@ -195,7 +222,7 @@ code {
   opacity: 0.85;
 
   .tile__icon {
-    color: #2e7d32;
+    background: #2e7d32;
   }
 }
 
@@ -205,17 +232,16 @@ code {
   border-color: #c62828;
 
   .tile__icon {
-    color: #c62828;
+    background: #c62828;
   }
 }
 
-@media (max-width: 480px) {
-  .board {
-    grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
-    gap: 8px;
-  }
-
+@media (max-width: 400px) {
   .tile__value {
     font-size: 18px;
+  }
+
+  .tile__base {
+    font-size: 12px;
   }
 }

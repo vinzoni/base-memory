@@ -63,6 +63,9 @@ function buildTile(tile, tileState, gameOver, onTileClick) {
 
 export function renderBoard(container, state, { onTileClick }) {
   container.replaceChildren();
+  // La griglia si dimensiona sul numero effettivo di tessere (SPECIFICHE.md §7),
+  // non su un tetto fisso: colonne = lato del quadrato più piccolo che le contiene.
+  container.style.setProperty('--board-columns', Math.ceil(Math.sqrt(state.tiles.length)));
   const gameOver = state.status !== GAME_STATUS.PLAYING;
 
   state.tiles.forEach((tile) => {
