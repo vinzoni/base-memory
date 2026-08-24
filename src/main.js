@@ -1,60 +1,69 @@
-import './style.css'
-import javascriptLogo from './assets/javascript.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import { setupCounter } from './counter.js'
+import './style.css';
+import {
+  GAME_STATUS,
+  acknowledgeMismatch,
+  checkTimeout,
+  createGame,
+  selectTile,
+} from './core/gameEngine.js';
+import { getLevelById } from './core/levels.js';
+import { UI_TIMING } from './config.js';
+import { renderBoard } from './ui/board.js';
+import { renderHud } from './ui/hud.js';
+
+const level = getLevelById(1);
+const selectedBases = ['DEC', 'BIN'];
 
 document.querySelector('#app').innerHTML = `
-<section id="center">
-  <div class="hero">
-    <img src="${heroImg}" class="base" width="170" height="179">
-    <img src="${javascriptLogo}" class="framework" alt="JavaScript logo"/>
-    <img src="${viteLogo}" class="vite" alt="Vite logo" />
-  </div>
-  <div>
-    <h1>Get started</h1>
-    <p>Edit <code>src/main.js</code> and save to test <code>HMR</code></p>
-  </div>
-  <button id="counter" type="button" class="counter"></button>
-</section>
+  <main class="game-screen">
+    <section id="hud" class="hud"></section>
+    <section id="board" class="board"></section>
+  </main>
+`;
+const hudEl = document.querySelector('#hud');
+const boardEl = document.querySelector('#board');
 
-<div class="ticks"></div>
+let state = createGame({ level, selectedBases, startedAt: Date.now() });
 
-<section id="next-steps">
-  <div id="docs">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#documentation-icon"></use></svg>
-    <h2>Documentation</h2>
-    <p>Your questions, answered</p>
-    <ul>
-      <li>
-        <a href="https://vite.dev/" target="_blank">
-          <img class="logo" src="${viteLogo}" alt="" />
-          Explore Vite
-        </a>
-      </li>
-      <li>
-        <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript" target="_blank">
-          <img class="button-icon" src="${javascriptLogo}" alt="">
-          Learn more
-        </a>
-      </li>
-    </ul>
-  </div>
-  <div id="social">
-    <svg class="icon" role="presentation" aria-hidden="true"><use href="/icons.svg#social-icon"></use></svg>
-    <h2>Connect with us</h2>
-    <p>Join the Vite community</p>
-    <ul>
-      <li><a href="https://github.com/vitejs/vite" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#github-icon"></use></svg>GitHub</a></li>
-      <li><a href="https://chat.vite.dev/" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#discord-icon"></use></svg>Discord</a></li>
-      <li><a href="https://x.com/vite_js" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#x-icon"></use></svg>X.com</a></li>
-      <li><a href="https://bsky.app/profile/vite.dev" target="_blank"><svg class="button-icon" role="presentation" aria-hidden="true"><use href="/icons.svg#bluesky-icon"></use></svg>Bluesky</a></li>
-    </ul>
-  </div>
-</section>
+function renderHudNow() {
+  renderHud(hudEl, state, Date.now());
+}
 
-<div class="ticks"></div>
-<section id="spacer"></section>
-`
+function renderFullBoard() {
+  renderBoard(boardEl, state, { onTileClick: handleTileClick });
+}
 
-setupCounter(document.querySelector('#counter'))
+function handleTileClick(tileId) {
+  const next = selectTile(state, tileId, Date.now());
+  if (next === state) return; // no-op difensivo dell'engine: niente da ridisegnare
+  state = next;
+  renderFullBoard();
+  renderHudNow();
+
+  if (state.pendingMismatch) {
+    setTimeout(() => {
+      state = acknowledgeMismatch(state);
+      renderFullBoard();
+      renderHudNow();
+    }, UI_TIMING.MISMATCH_FEEDBACK_MS);
+  }
+}
+
+// La griglia si ridisegna solo quando lo stato delle tessere cambia davvero (click
+// risolto, fine feedback d'errore, timeout): ridisegnarla a ogni tick del timer
+// sposterebbe il focus da tastiera fuori dalla tessera su cui l'utente sta
+// navigando con Tab, rompendo la navigazione richiesta da SPECIFICHE.md §7.
+const timerId = setInterval(() => {
+  if (state.status === GAME_STATUS.PLAYING) {
+    const next = checkTimeout(state, Date.now());
+    if (next !== state) {
+      state = next;
+      renderFullBoard();
+    }
+  }
+  renderHudNow();
+  if (state.status !== GAME_STATUS.PLAYING) clearInterval(timerId);
+}, UI_TIMING.TIMER_TICK_INTERVAL_MS);
+
+renderFullBoard();
+renderHudNow();
