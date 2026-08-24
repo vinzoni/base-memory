@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { countUsableValues, generatePairs, shuffle } from '../src/core/pairGenerator.js';
+import {
+  countUsableValues,
+  generatePairs,
+  getPlayablePairCount,
+  shuffle,
+} from '../src/core/pairGenerator.js';
 import { formatValueInBase } from '../src/core/bases.js';
 import { LEVELS } from '../src/core/levels.js';
 
@@ -33,6 +38,20 @@ describe('countUsableValues', () => {
     expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'BIN'])).toBe(14);
     expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'OCT'])).toBe(8);
     expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'HEX'])).toBe(6);
+  });
+});
+
+describe('getPlayablePairCount', () => {
+  it('coincide con il numero di coppie generate quando il tetto maxPairCount è il limite (DEC+BIN, Livello 1)', () => {
+    expect(getPlayablePairCount(LEVEL_1, ['DEC', 'BIN'])).toBe(8);
+    const tiles = generatePairs(LEVEL_1, ['DEC', 'BIN'], mulberry32(1));
+    expect(tiles.length / 2).toBe(8);
+  });
+
+  it('coincide con il numero di coppie generate quando il range disponibile è il limite (DEC+HEX, Livello 1)', () => {
+    expect(getPlayablePairCount(LEVEL_1, ['DEC', 'HEX'])).toBe(6);
+    const tiles = generatePairs(LEVEL_1, ['DEC', 'HEX'], mulberry32(1));
+    expect(tiles.length / 2).toBe(6);
   });
 });
 

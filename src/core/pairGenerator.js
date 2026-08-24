@@ -57,6 +57,15 @@ export function countUsableValues(valueRange, selectedBases) {
   ).length;
 }
 
+// maxPairCount è un tetto, non un numero garantito: con alcune combinazioni di basi
+// il valueRange non contiene abbastanza valori con rappresentazioni diverse (es.
+// DEC+HEX su un range piccolo, vedi SPECIFICHE.md §4). Esposta separatamente da
+// generatePairs così la UI di configurazione può mostrare l'anteprima del numero di
+// coppie prima di avviare la partita, senza duplicare la formula.
+export function getPlayablePairCount({ valueRange, maxPairCount }, selectedBases) {
+  return Math.min(maxPairCount, countUsableValues(valueRange, selectedBases));
+}
+
 function assertValidSelectedBases(selectedBases) {
   const uniqueBases = new Set(selectedBases);
   if (uniqueBases.size !== selectedBases.length) {
@@ -75,10 +84,7 @@ export function generatePairs({ valueRange, maxPairCount }, selectedBases, rando
     throw new Error(`Servono almeno ${MIN_SELECTABLE_BASES} basi selezionate.`);
   }
 
-  // maxPairCount è un tetto, non un numero garantito: con alcune combinazioni di
-  // basi il valueRange non contiene abbastanza valori con rappresentazioni diverse
-  // (es. DEC+HEX su un range piccolo). Generiamo il massimo raggiungibile.
-  const targetPairCount = Math.min(maxPairCount, countUsableValues(valueRange, selectedBases));
+  const targetPairCount = getPlayablePairCount({ valueRange, maxPairCount }, selectedBases);
   if (targetPairCount < 2) {
     throw new Error('Configurazione non giocabile: meno di 2 coppie disponibili.');
   }
