@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { LEVELS, getLevelById } from '../src/core/levels.js';
-import { findBoardGrid } from '../src/core/pairGenerator.js';
+import { findBoardGrid, getGridPairCap, getPlayablePairCount } from '../src/core/pairGenerator.js';
 
 describe('levels', () => {
-  it('espone solo il Livello 1, come da prototipo', () => {
-    expect(LEVELS).toHaveLength(1);
+  it('espone la progressione completa, dal Livello 1 al Livello 8', () => {
+    expect(LEVELS).toHaveLength(8);
     expect(LEVELS[0]).toEqual({
       id: 1,
       name: 'Livello 1',
@@ -28,6 +28,12 @@ describe('levels', () => {
     for (const level of LEVELS) {
       const declaredTileCount = level.grid.columns * level.grid.rows;
       expect(findBoardGrid(declaredTileCount)).toEqual(level.grid);
+    }
+  });
+
+  it('con DEC+BIN ogni livello produce esattamente le coppie della griglia dichiarata', () => {
+    for (const level of LEVELS) {
+      expect(getPlayablePairCount(level, ['DEC', 'BIN'])).toBe(getGridPairCap({ grid: level.grid }));
     }
   });
 });
