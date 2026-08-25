@@ -1,5 +1,5 @@
 import { BASES, formatValueInBase } from './bases.js';
-import { MIN_SELECTABLE_BASES } from '../config.js';
+import { MAX_BOARD_ASPECT_RATIO, MIN_SELECTABLE_BASES } from '../config.js';
 
 export function shuffle(items, random) {
   const shuffled = items.slice();
@@ -72,13 +72,60 @@ export function countUsableValues({ valueRange, requireDecimalPivot }, selectedB
   ).length;
 }
 
-// maxPairCount è un tetto, non un numero garantito: con alcune combinazioni di basi
-// il valueRange non contiene abbastanza valori con rappresentazioni diverse (es.
-// DEC+HEX su un range piccolo, vedi SPECIFICHE.md §4). Esposta separatamente da
-// generatePairs così la UI di configurazione può mostrare l'anteprima del numero di
-// coppie prima di avviare la partita, senza duplicare la formula.
-export function getPlayablePairCount({ valueRange, maxPairCount, requireDecimalPivot }, selectedBases) {
-  return Math.min(maxPairCount, countUsableValues({ valueRange, requireDecimalPivot }, selectedBases));
+// Tetto di coppie derivato dalla griglia obiettivo del livello. Singola
+// implementazione: usata sia internamente sia dalla schermata di configurazione,
+// così il tetto mostrato in anteprima non può divergere da quello usato per generare.
+export function getGridPairCap({ grid }) {
+  return (grid.columns * grid.rows) / 2;
+}
+
+function rectangleCandidates(tileCount) {
+  const candidates = [];
+  for (let rows = 1; rows * rows <= tileCount; rows += 1) {
+    if (tileCount % rows === 0) {
+      candidates.push({ columns: tileCount / rows, rows });
+    }
+  }
+  return candidates;
+}
+
+function bestRectangleFor(tileCount, maxAspectRatio) {
+  const acceptable = rectangleCandidates(tileCount).filter(
+    ({ columns, rows }) => columns / rows <= maxAspectRatio
+  );
+  if (acceptable.length === 0) return null;
+  return acceptable.reduce((best, candidate) =>
+    candidate.columns / candidate.rows < best.columns / best.rows ? candidate : best
+  );
+}
+
+// Dato un numero massimo di tessere, restituisce il rettangolo migliore
+// disponibile per la griglia di gioco. Non tutti i conteggi si fattorizzano in
+// proporzioni accettabili (14 tessere: solo 7x2, rapporto 3.5): in quel caso si
+// scarta una coppia alla volta finché non se ne trova uno che si fattorizza bene
+// (12 tessere: 4x3). Il ciclo termina sempre con successo per maxTileCount >= 4,
+// perché 4 tessere ammettono sempre {2, 2} (rapporto 1): non serve un fallback
+// dopo il ciclo.
+export function findBoardGrid(maxTileCount, { maxAspectRatio = MAX_BOARD_ASPECT_RATIO } = {}) {
+  if (maxTileCount < 4) {
+    throw new Error('Servono almeno 4 tessere (2 coppie) per formare una griglia.');
+  }
+  for (let tileCount = maxTileCount - (maxTileCount % 2); tileCount >= 4; tileCount -= 2) {
+    const rectangle = bestRectangleFor(tileCount, maxAspectRatio);
+    if (rectangle) return rectangle;
+  }
+}
+
+export function getPlayablePairCount({ valueRange, grid, requireDecimalPivot }, selectedBases) {
+  const gridPairCap = getGridPairCap({ grid });
+  const usableValueCount = countUsableValues({ valueRange, requireDecimalPivot }, selectedBases);
+  const desiredPairCount = Math.min(gridPairCap, usableValueCount);
+  const desiredTileCount = desiredPairCount * 2;
+  // Sotto le 4 tessere non c'è un rettangolo sensato da cercare: il chiamante
+  // (generatePairs) gestisce già il caso "meno di 2 coppie disponibili".
+  if (desiredTileCount < 4) return desiredPairCount;
+  const { columns, rows } = findBoardGrid(desiredTileCount);
+  return (columns * rows) / 2;
 }
 
 function assertValidSelectedBases(selectedBases) {
@@ -93,7 +140,7 @@ function assertValidSelectedBases(selectedBases) {
 }
 
 export function generatePairs(
-  { valueRange, maxPairCount, requireDecimalPivot },
+  { valueRange, grid, requireDecimalPivot },
   selectedBases,
   random = Math.random
 ) {
@@ -104,7 +151,7 @@ export function generatePairs(
   }
 
   const targetPairCount = getPlayablePairCount(
-    { valueRange, maxPairCount, requireDecimalPivot },
+    { valueRange, grid, requireDecimalPivot },
     selectedBases
   );
   if (targetPairCount < 2) {

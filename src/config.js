@@ -8,6 +8,10 @@ export const SCORING = {
 export const MIN_SELECTABLE_BASES = 2;
 export const DEFAULT_SELECTED_BASES = ['DEC', 'BIN'];
 
+// Rapporto massimo lato lungo/lato corto per considerare una griglia di gioco
+// "giocabile": oltre questa soglia il rettangolo risulta troppo allungato.
+export const MAX_BOARD_ASPECT_RATIO = 2;
+
 export const STORAGE_KEYS = {
   HIGH_SCORES: 'baseMemory.highScores',
 };

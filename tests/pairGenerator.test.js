@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   countUsableValues,
+  findBoardGrid,
   generatePairs,
+  getGridPairCap,
   getPlayablePairCount,
   shuffle,
 } from '../src/core/pairGenerator.js';
 import { formatValueInBase } from '../src/core/bases.js';
 import { LEVELS } from '../src/core/levels.js';
+import { MAX_BOARD_ASPECT_RATIO } from '../src/config.js';
 
 const LEVEL_1 = LEVELS[0];
 
@@ -51,7 +54,7 @@ describe('countUsableValues', () => {
 });
 
 describe('getPlayablePairCount', () => {
-  it('coincide con il numero di coppie generate quando il tetto maxPairCount è il limite (DEC+BIN, Livello 1)', () => {
+  it('coincide con il numero di coppie generate quando il tetto della griglia è il limite (DEC+BIN, Livello 1)', () => {
     expect(getPlayablePairCount(LEVEL_1, ['DEC', 'BIN'])).toBe(8);
     const tiles = generatePairs(LEVEL_1, ['DEC', 'BIN'], mulberry32(1));
     expect(tiles.length / 2).toBe(8);
@@ -85,9 +88,9 @@ describe('generatePairs', () => {
     expect(tiles).toHaveLength(12);
   });
 
-  it('non genera mai più coppie del tetto maxPairCount', () => {
+  it('non genera mai più tessere del tetto della griglia', () => {
     const tiles = generatePairs(LEVEL_1, ['DEC', 'BIN'], mulberry32(2));
-    expect(tiles.length).toBeLessThanOrEqual(LEVEL_1.maxPairCount * 2);
+    expect(tiles.length).toBeLessThanOrEqual(LEVEL_1.grid.columns * LEVEL_1.grid.rows);
   });
 
   it('scarta ogni coppia con rappresentazione identica tra le due basi', () => {
@@ -146,7 +149,7 @@ describe('generatePairs', () => {
   });
 
   it('solleva un errore se il range non permette almeno 2 coppie', () => {
-    const tinyLevel = { valueRange: { min: 0, max: 2 }, maxPairCount: 5 };
+    const tinyLevel = { valueRange: { min: 0, max: 2 }, grid: { columns: 4, rows: 4 } };
     expect(() => generatePairs(tinyLevel, ['DEC', 'BIN'], mulberry32(9))).toThrow();
   });
 
@@ -187,5 +190,43 @@ describe('vincolo pivot decimale (requireDecimalPivot)', () => {
     const pairCount = getPlayablePairCount(LEVEL_1, ['BIN', 'HEX']);
     const tiles = generatePairs(LEVEL_1, ['BIN', 'HEX'], mulberry32(15));
     expect(tiles.length / 2).toBe(pairCount);
+  });
+});
+
+describe('getGridPairCap', () => {
+  it('deriva il tetto di coppie dalla griglia del livello', () => {
+    expect(getGridPairCap({ grid: { columns: 4, rows: 4 } })).toBe(8);
+    expect(getGridPairCap({ grid: { columns: 4, rows: 3 } })).toBe(6);
+  });
+});
+
+describe('findBoardGrid', () => {
+  it('Livello 1 con DEC+BIN produce una griglia 4x4', () => {
+    const tiles = generatePairs(LEVEL_1, ['DEC', 'BIN'], mulberry32(1));
+    expect(findBoardGrid(tiles.length)).toEqual({ columns: 4, rows: 4 });
+  });
+
+  it('Livello 1 con DEC+HEX produce una griglia 4x3 senza eccezioni', () => {
+    expect(() => generatePairs(LEVEL_1, ['DEC', 'HEX'], mulberry32(1))).not.toThrow();
+    const tiles = generatePairs(LEVEL_1, ['DEC', 'HEX'], mulberry32(1));
+    expect(findBoardGrid(tiles.length)).toEqual({ columns: 4, rows: 3 });
+  });
+
+  it('scarta una coppia per ricadere su un numero fattorizzabile (14 tessere, solo 7x2, ratio 3.5 -> 12, 4x3)', () => {
+    expect(findBoardGrid(14)).toEqual({ columns: 4, rows: 3 });
+  });
+
+  it('con un conteggio "scomodo" (quasi primo) scarta una coppia e ricade su un rettangolo accettabile (22 -> 20, 5x4)', () => {
+    expect(findBoardGrid(22)).toEqual({ columns: 5, rows: 4 });
+  });
+
+  it('per ogni conteggio pari di tessere da 4 a 36 restituisce un rettangolo accettabile scartando al più una coppia', () => {
+    for (let tileCount = 4; tileCount <= 36; tileCount += 2) {
+      const { columns, rows } = findBoardGrid(tileCount);
+      expect(columns * rows).toBeLessThanOrEqual(tileCount);
+      expect(columns).toBeGreaterThanOrEqual(rows);
+      expect(columns / rows).toBeLessThanOrEqual(MAX_BOARD_ASPECT_RATIO);
+      expect(tileCount - columns * rows).toBeLessThanOrEqual(2);
+    }
   });
 });

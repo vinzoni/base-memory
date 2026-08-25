@@ -1,5 +1,5 @@
 import { BASES } from '../core/bases.js';
-import { getPlayablePairCount } from '../core/pairGenerator.js';
+import { getGridPairCap, getPlayablePairCount } from '../core/pairGenerator.js';
 import { DEFAULT_SELECTED_BASES, MIN_SELECTABLE_BASES } from '../config.js';
 
 const BASE_ORDER = Object.keys(BASES);
@@ -19,7 +19,7 @@ function computeStatus(selectedBases, level) {
   // producono la stessa rappresentazione per uno stesso valore (SPECIFICHE.md
   // §2.2): reso esplicito invece di lasciarlo dedurre da un numero che scende,
   // perché è proprio il concetto didattico che il gioco vuole insegnare.
-  const showCapExplanation = pairCount < level.maxPairCount;
+  const showCapExplanation = pairCount < getGridPairCap(level);
 
   if (pairCount < 2) {
     return {
