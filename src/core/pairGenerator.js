@@ -31,6 +31,17 @@ function basePairCombinations(bases) {
   return combinations;
 }
 
+// Il vincolo "pivot decimale" (Livello 1) riduce l'accoppiamento a coppie che
+// includono DEC, per evitare la doppia conversione mentale di BIN<->HEX. Se DEC
+// non è tra le basi selezionate il vincolo è insoddisfacibile: va ignorato,
+// non trasformato in un errore, perché è una scelta del giocatore.
+function applyDecimalPivot(basePairs, selectedBases, requireDecimalPivot) {
+  if (!requireDecimalPivot || !selectedBases.includes('DEC')) {
+    return basePairs;
+  }
+  return basePairs.filter(([baseA, baseB]) => baseA === 'DEC' || baseB === 'DEC');
+}
+
 // Una coppia è "gratis" (Vincolo §2.2) se le due basi producono la stessa stringa
 // per quel valore: va scartata, quindi cerchiamo la prima combinazione di basi
 // che produce rappresentazioni diverse.
@@ -50,8 +61,12 @@ function tileFor(pairId, baseId, value) {
   };
 }
 
-export function countUsableValues(valueRange, selectedBases) {
-  const basePairs = basePairCombinations(selectedBases);
+export function countUsableValues({ valueRange, requireDecimalPivot }, selectedBases) {
+  const basePairs = applyDecimalPivot(
+    basePairCombinations(selectedBases),
+    selectedBases,
+    requireDecimalPivot
+  );
   return valuesInRange(valueRange).filter(
     (value) => findUsableBasePair(value, basePairs) !== undefined
   ).length;
@@ -62,8 +77,8 @@ export function countUsableValues(valueRange, selectedBases) {
 // DEC+HEX su un range piccolo, vedi SPECIFICHE.md §4). Esposta separatamente da
 // generatePairs così la UI di configurazione può mostrare l'anteprima del numero di
 // coppie prima di avviare la partita, senza duplicare la formula.
-export function getPlayablePairCount({ valueRange, maxPairCount }, selectedBases) {
-  return Math.min(maxPairCount, countUsableValues(valueRange, selectedBases));
+export function getPlayablePairCount({ valueRange, maxPairCount, requireDecimalPivot }, selectedBases) {
+  return Math.min(maxPairCount, countUsableValues({ valueRange, requireDecimalPivot }, selectedBases));
 }
 
 function assertValidSelectedBases(selectedBases) {
@@ -77,24 +92,37 @@ function assertValidSelectedBases(selectedBases) {
   }
 }
 
-export function generatePairs({ valueRange, maxPairCount }, selectedBases, random = Math.random) {
+export function generatePairs(
+  { valueRange, maxPairCount, requireDecimalPivot },
+  selectedBases,
+  random = Math.random
+) {
   assertValidSelectedBases(selectedBases);
 
   if (selectedBases.length < MIN_SELECTABLE_BASES) {
     throw new Error(`Servono almeno ${MIN_SELECTABLE_BASES} basi selezionate.`);
   }
 
-  const targetPairCount = getPlayablePairCount({ valueRange, maxPairCount }, selectedBases);
+  const targetPairCount = getPlayablePairCount(
+    { valueRange, maxPairCount, requireDecimalPivot },
+    selectedBases
+  );
   if (targetPairCount < 2) {
     throw new Error('Configurazione non giocabile: meno di 2 coppie disponibili.');
   }
+
+  const eligibleBasePairs = applyDecimalPivot(
+    basePairCombinations(selectedBases),
+    selectedBases,
+    requireDecimalPivot
+  );
 
   const shuffledValues = shuffle(valuesInRange(valueRange), random);
   const pairs = [];
 
   for (const value of shuffledValues) {
     if (pairs.length >= targetPairCount) break;
-    const shuffledBasePairs = shuffle(basePairCombinations(selectedBases), random);
+    const shuffledBasePairs = shuffle(eligibleBasePairs, random);
     const usableBasePair = findUsableBasePair(value, shuffledBasePairs);
     if (usableBasePair) {
       pairs.push({ value, baseA: usableBasePair[0], baseB: usableBasePair[1] });

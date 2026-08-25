@@ -35,9 +35,18 @@ function groupTilesByPair(tiles) {
 
 describe('countUsableValues', () => {
   it('conta i valori accoppiabili nel range 0-15 per ciascuna combinazione di basi', () => {
-    expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'BIN'])).toBe(14);
-    expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'OCT'])).toBe(8);
-    expect(countUsableValues({ min: 0, max: 15 }, ['DEC', 'HEX'])).toBe(6);
+    const valueRange = { min: 0, max: 15 };
+    expect(countUsableValues({ valueRange, requireDecimalPivot: false }, ['DEC', 'BIN'])).toBe(14);
+    expect(countUsableValues({ valueRange, requireDecimalPivot: false }, ['DEC', 'OCT'])).toBe(8);
+    expect(countUsableValues({ valueRange, requireDecimalPivot: false }, ['DEC', 'HEX'])).toBe(6);
+  });
+
+  it('con il vincolo pivot decimale attivo il conteggio non cambia su DEC+BIN+HEX (0-15), perché DEC copre già tutti i valori non banali', () => {
+    const valueRange = { min: 0, max: 15 };
+    const selectedBases = ['DEC', 'BIN', 'HEX'];
+    expect(countUsableValues({ valueRange, requireDecimalPivot: true }, selectedBases)).toBe(
+      countUsableValues({ valueRange, requireDecimalPivot: false }, selectedBases)
+    );
   });
 });
 
@@ -147,5 +156,36 @@ describe('generatePairs', () => {
 
   it('solleva un errore se selectedBases contiene una base sconosciuta', () => {
     expect(() => generatePairs(LEVEL_1, ['DEC', 'ROMAN'], mulberry32(11))).toThrow();
+  });
+});
+
+describe('vincolo pivot decimale (requireDecimalPivot)', () => {
+  it('con DEC+BIN+HEX e vincolo attivo, nessuna coppia è BIN-HEX: ogni coppia include DEC', () => {
+    const tiles = generatePairs(LEVEL_1, ['DEC', 'BIN', 'HEX'], mulberry32(12));
+    for (const [, positions] of groupTilesByPair(tiles)) {
+      const [a, b] = positions.map((p) => p.tile);
+      expect([a.baseId, b.baseId]).toContain('DEC');
+    }
+  });
+
+  it('con solo BIN+HEX il vincolo è insoddisfacibile e viene ignorato senza errori', () => {
+    const tiles = generatePairs(LEVEL_1, ['BIN', 'HEX'], mulberry32(13));
+    expect(tiles.length).toBeGreaterThan(0);
+    for (const [, positions] of groupTilesByPair(tiles)) {
+      const [a, b] = positions.map((p) => p.tile);
+      expect([a.baseId, b.baseId].sort()).toEqual(['BIN', 'HEX']);
+    }
+  });
+
+  it('getPlayablePairCount coincide con le coppie generate quando il vincolo è attivo (DEC+HEX, Livello 1)', () => {
+    const pairCount = getPlayablePairCount(LEVEL_1, ['DEC', 'HEX']);
+    const tiles = generatePairs(LEVEL_1, ['DEC', 'HEX'], mulberry32(14));
+    expect(tiles.length / 2).toBe(pairCount);
+  });
+
+  it('getPlayablePairCount coincide con le coppie generate quando il vincolo è attivo ma insoddisfacibile (BIN+HEX)', () => {
+    const pairCount = getPlayablePairCount(LEVEL_1, ['BIN', 'HEX']);
+    const tiles = generatePairs(LEVEL_1, ['BIN', 'HEX'], mulberry32(15));
+    expect(tiles.length / 2).toBe(pairCount);
   });
 });

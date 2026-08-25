@@ -6,6 +6,7 @@ export const LEVELS = [
     valueRange: { min: 0, max: 15 },
     timeLimitSeconds: 180,
     coveredRatio: 0,
+    requireDecimalPivot: true,
   },
 ];
 
