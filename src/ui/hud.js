@@ -20,6 +20,7 @@ export function renderHud(container, state, now) {
   const isTimeLow = remainingSeconds < UI_TIMING.TIME_WARNING_THRESHOLD_SECONDS;
 
   container.replaceChildren(
+    buildItem('hud__item', `Livello: ${state.levelId}`),
     buildItem(
       `hud__item hud__time${isTimeLow ? ' hud__time--warning' : ''}`,
       `${isTimeLow ? '⚠ ' : ''}Tempo: ${formatTime(remainingSeconds)}`

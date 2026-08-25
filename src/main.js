@@ -2,9 +2,11 @@ import './style.css';
 import {
   GAME_STATUS,
   acknowledgeMismatch,
+  advanceToNextLevel,
   checkTimeout,
   createGame,
-  getElapsedSeconds,
+  finishGame,
+  getTotalElapsedSeconds,
   selectTile,
 } from './core/gameEngine.js';
 import { getLevelById } from './core/levels.js';
@@ -13,6 +15,7 @@ import { renderBoard } from './ui/board.js';
 import { renderHud } from './ui/hud.js';
 import { renderConfigScreen } from './ui/configScreen.js';
 import { renderSummaryScreen } from './ui/summaryScreen.js';
+import { renderLevelCompleteScreen } from './ui/levelCompleteScreen.js';
 import { renderHighScoresScreen } from './ui/highScoresScreen.js';
 import { createScreenManager } from './ui/screens.js';
 import {
@@ -22,7 +25,7 @@ import {
   readHighScores,
 } from './storage/highScores.js';
 
-const level = getLevelById(1);
+const FIRST_LEVEL = getLevelById(1);
 const screens = createScreenManager(document.querySelector('#app'));
 
 // Unico punto dell'app che tocca localStorage: il resto del codice (schermate incluse)
@@ -38,7 +41,7 @@ function resetHighScores() {
   clearHighScores(storage);
 }
 
-function renderGameScreen(container, selectedBases, { onGameOver }) {
+function renderGameScreen(container, { selectedBases, level, previousState, onLevelComplete, onGameOver }) {
   container.innerHTML = `
     <main class="game-screen">
       <section id="hud" class="hud"></section>
@@ -48,7 +51,9 @@ function renderGameScreen(container, selectedBases, { onGameOver }) {
   const hudEl = container.querySelector('#hud');
   const boardEl = container.querySelector('#board');
 
-  let state = createGame({ level, selectedBases, startedAt: Date.now() });
+  let state = previousState
+    ? advanceToNextLevel(previousState, { level, selectedBases, startedAt: Date.now() })
+    : createGame({ level, selectedBases, startedAt: Date.now() });
 
   function renderHudNow() {
     renderHud(hudEl, state, Date.now());
@@ -64,6 +69,16 @@ function renderGameScreen(container, selectedBases, { onGameOver }) {
     state = next;
     renderFullBoard();
     renderHudNow();
+
+    if (state.status === GAME_STATUS.LEVEL_COMPLETE) {
+      const nextLevel = getLevelById(state.levelId + 1);
+      if (nextLevel) {
+        onLevelComplete(state, nextLevel);
+      } else {
+        onGameOver(finishGame(state));
+      }
+      return;
+    }
 
     if (state.status !== GAME_STATUS.PLAYING) {
       onGameOver(state);
@@ -104,10 +119,29 @@ function renderGameScreen(container, selectedBases, { onGameOver }) {
   return () => clearInterval(timerId);
 }
 
-function showGameScreen(selectedBases) {
+function showLevel(selectedBases, level, previousState) {
   screens.show((container) =>
-    renderGameScreen(container, selectedBases, {
+    renderGameScreen(container, {
+      selectedBases,
+      level,
+      previousState,
+      onLevelComplete: (state, nextLevel) => showLevelCompleteScreen(selectedBases, state, nextLevel),
       onGameOver: (state) => showSummaryScreen(selectedBases, state),
+    })
+  );
+}
+
+function showGameScreen(selectedBases) {
+  showLevel(selectedBases, FIRST_LEVEL, null);
+}
+
+function showLevelCompleteScreen(selectedBases, state, nextLevel) {
+  screens.show((container) =>
+    renderLevelCompleteScreen(container, {
+      state,
+      completedLevel: getLevelById(state.levelId),
+      nextLevel,
+      onContinue: () => showLevel(selectedBases, nextLevel, state),
     })
   );
 }
@@ -115,10 +149,12 @@ function showGameScreen(selectedBases) {
 function showSummaryScreen(selectedBases, state) {
   const currentScores = getHighScores();
   const qualifies = qualifiesForHighScore(currentScores, state.score);
+  const level = getLevelById(state.levelId);
 
   screens.show((container) =>
     renderSummaryScreen(container, {
       state,
+      level,
       qualifies,
       onSaveScore: (playerName) => {
         const entry = {
@@ -126,8 +162,8 @@ function showSummaryScreen(selectedBases, state) {
           score: state.score,
           dateTime: new Date().toISOString(),
           selectedBases,
-          levelReached: level.id,
-          timeTakenSeconds: getElapsedSeconds(state, Date.now()),
+          levelReached: state.levelId,
+          timeTakenSeconds: getTotalElapsedSeconds(state, Date.now()),
         };
         saveHighScore(entry);
         // isValidEntry in storage/highScores.js scarta in silenzio le voci
@@ -162,7 +198,7 @@ function showHighScoresScreen() {
 function showConfigScreen() {
   screens.show((container) =>
     renderConfigScreen(container, {
-      level,
+      level: FIRST_LEVEL,
       onStart: showGameScreen,
       onShowHighScores: showHighScoresScreen,
     })

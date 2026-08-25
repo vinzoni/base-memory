@@ -1,4 +1,4 @@
-import { GAME_STATUS, getElapsedSeconds } from '../core/gameEngine.js';
+import { GAME_STATUS, getTotalElapsedSeconds } from '../core/gameEngine.js';
 import { formatTime } from './hud.js';
 import { MAX_PLAYER_NAME_LENGTH } from '../config.js';
 
@@ -59,12 +59,12 @@ function buildHighScoreForm(state, onSaveScore) {
   return form;
 }
 
-export function renderSummaryScreen(container, { state, qualifies, onSaveScore, onPlayAgain, onShowHighScores }) {
+export function renderSummaryScreen(container, { state, level, qualifies, onSaveScore, onPlayAgain, onShowHighScores }) {
   const section = document.createElement('section');
   section.className = 'summary-screen';
 
   const heading = document.createElement('h1');
-  heading.textContent = state.status === GAME_STATUS.WON ? 'Livello completato' : 'Tempo scaduto';
+  heading.textContent = state.status === GAME_STATUS.WON ? 'Tutti i livelli completati!' : 'Tempo scaduto';
   section.appendChild(heading);
 
   const totalPairCount = state.tiles.length / 2;
@@ -72,7 +72,8 @@ export function renderSummaryScreen(container, { state, qualifies, onSaveScore, 
   stats.className = 'summary-screen__stats';
   stats.append(
     buildStat('Punteggio finale', String(state.score)),
-    buildStat('Tempo impiegato', formatTime(getElapsedSeconds(state, Date.now()))),
+    buildStat('Livello raggiunto', level.name),
+    buildStat('Tempo impiegato', formatTime(getTotalElapsedSeconds(state, Date.now()))),
     buildStat('Coppie risolte', `${state.resolvedPairIds.length}/${totalPairCount}`),
     buildStat('Errori', String(state.errorCount))
   );

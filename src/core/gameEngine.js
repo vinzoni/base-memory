@@ -3,12 +3,15 @@ import { scoreLevelCompletion, scorePairError, scorePairMatch } from './scoring.
 
 export const GAME_STATUS = {
   PLAYING: 'playing',
+  LEVEL_COMPLETE: 'levelComplete',
   WON: 'won',
   LOST: 'lost',
 };
 
 export function createGame({ level, selectedBases, random = Math.random, startedAt }) {
   return {
+    levelId: level.id,
+    elapsedBeforeCurrentLevel: 0,
     tiles: generatePairs(level, selectedBases, random),
     timeLimitSeconds: level.timeLimitSeconds,
     startedAt,
@@ -22,6 +25,32 @@ export function createGame({ level, selectedBases, random = Math.random, started
   };
 }
 
+// Somma alla durata già accumulata dei livelli precedenti quella del livello
+// appena concluso (finishedAt - startedAt), non l'intervallo fino al nuovo
+// startedAt: il tempo passato sulla schermata intermedia tra un livello e
+// l'altro non deve contare come tempo di gioco.
+export function advanceToNextLevel(state, { level, selectedBases, random = Math.random, startedAt }) {
+  if (state.status !== GAME_STATUS.LEVEL_COMPLETE) return state;
+  return {
+    ...state,
+    levelId: level.id,
+    elapsedBeforeCurrentLevel: state.elapsedBeforeCurrentLevel + (state.finishedAt - state.startedAt),
+    tiles: generatePairs(level, selectedBases, random),
+    timeLimitSeconds: level.timeLimitSeconds,
+    startedAt,
+    finishedAt: null,
+    selectedTileIds: [],
+    resolvedPairIds: [],
+    pendingMismatch: false,
+    status: GAME_STATUS.PLAYING,
+  };
+}
+
+export function finishGame(state) {
+  if (state.status !== GAME_STATUS.LEVEL_COMPLETE) return state;
+  return { ...state, status: GAME_STATUS.WON };
+}
+
 // A partita terminata l'orologio si ferma su finishedAt: `now` viene ignorato per
 // non far derivare il tempo trascorso oltre la fine della partita.
 export function getElapsedSeconds(state, now) {
@@ -31,6 +60,14 @@ export function getElapsedSeconds(state, now) {
 
 export function getRemainingSeconds(state, now) {
   return Math.max(0, state.timeLimitSeconds - getElapsedSeconds(state, now));
+}
+
+// Tempo totale di gioco su tutta la partita, non solo sul livello corrente:
+// l'accumulato dei livelli già conclusi più il tempo del livello in corso.
+export function getTotalElapsedSeconds(state, now) {
+  const endTime = state.finishedAt ?? now;
+  const currentLevelElapsedMs = endTime - state.startedAt;
+  return Math.max(0, Math.floor((state.elapsedBeforeCurrentLevel + currentLevelElapsedMs) / 1000));
 }
 
 function isTimeUp(state, now) {
@@ -110,7 +147,7 @@ export function selectTile(state, tileId, now) {
     selectedTileIds: [],
     resolvedPairIds,
     score: finalScore,
-    status: GAME_STATUS.WON,
+    status: GAME_STATUS.LEVEL_COMPLETE,
     finishedAt,
   };
 }

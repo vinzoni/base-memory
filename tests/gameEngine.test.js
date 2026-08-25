@@ -2,10 +2,13 @@ import { describe, expect, it } from 'vitest';
 import {
   GAME_STATUS,
   acknowledgeMismatch,
+  advanceToNextLevel,
   checkTimeout,
   createGame,
+  finishGame,
   getElapsedSeconds,
   getRemainingSeconds,
+  getTotalElapsedSeconds,
   selectTile,
 } from '../src/core/gameEngine.js';
 import { LEVELS } from '../src/core/levels.js';
@@ -29,6 +32,8 @@ function mulberry32(seed) {
 // pairId 0 (valore 4: DEC "4" / BIN "100") e pairId 1 (valore 5: DEC "5" / BIN "101").
 function twoPairState(overrides = {}) {
   return {
+    levelId: 1,
+    elapsedBeforeCurrentLevel: 0,
     tiles: [
       { id: 'p0-DEC', pairId: 0, baseId: 'DEC', value: 4, display: '4' },
       { id: 'p0-BIN', pairId: 0, baseId: 'BIN', value: 4, display: '100' },
@@ -75,6 +80,8 @@ describe('createGame', () => {
     expect(state.pendingMismatch).toBe(false);
     expect(state.finishedAt).toBeNull();
     expect(state.tiles.length).toBeGreaterThan(0);
+    expect(state.levelId).toBe(LEVEL_1.id);
+    expect(state.elapsedBeforeCurrentLevel).toBe(0);
   });
 });
 
@@ -163,12 +170,12 @@ describe('acknowledgeMismatch', () => {
 });
 
 describe('selectTile — fine livello per completamento', () => {
-  it('completare l\'ultima coppia entro il tempo porta a WON con il bonus corretto', () => {
+  it('completare l\'ultima coppia entro il tempo porta a LEVEL_COMPLETE con il bonus corretto', () => {
     const state = twoPairState({ resolvedPairIds: [0], score: 300 });
     const afterFirst = selectTile(state, 'p1-DEC', 1000);
     const result = selectTile(afterFirst, 'p1-BIN', 2000);
 
-    expect(result.status).toBe(GAME_STATUS.WON);
+    expect(result.status).toBe(GAME_STATUS.LEVEL_COMPLETE);
     expect(result.finishedAt).toBe(2000);
     expect(result.resolvedPairIds).toEqual([0, 1]);
 
@@ -250,7 +257,7 @@ describe('stato congelato a partita terminata', () => {
 });
 
 describe('integrazione: cablaggio end-to-end con createGame fino a WON', () => {
-  it('risolvere tutte le coppie generate porta a WON con aritmetica del punteggio esatta', () => {
+  it('risolvere tutte le coppie generate porta a LEVEL_COMPLETE con aritmetica del punteggio esatta, poi a WON con finishGame', () => {
     let state = createGame({
       level: LEVEL_1,
       selectedBases: ['DEC', 'BIN'],
@@ -267,7 +274,7 @@ describe('integrazione: cablaggio end-to-end con createGame fino a WON', () => {
       state = selectTile(state, tileB.id, isLast ? 50000 : 2000);
     });
 
-    expect(state.status).toBe(GAME_STATUS.WON);
+    expect(state.status).toBe(GAME_STATUS.LEVEL_COMPLETE);
     expect(state.errorCount).toBe(0);
 
     const timeRemainingSeconds = 180 - 50; // floor(50000ms / 1000)
@@ -276,5 +283,130 @@ describe('integrazione: cablaggio end-to-end con createGame fino a WON', () => {
       SCORING.LEVEL_COMPLETE_BONUS +
       timeRemainingSeconds * SCORING.SPEED_BONUS_PER_SECOND;
     expect(state.score).toBe(expectedScore);
+
+    const finished = finishGame(state);
+    expect(finished.status).toBe(GAME_STATUS.WON);
+    expect(finished.score).toBe(expectedScore);
+  });
+});
+
+describe('advanceToNextLevel', () => {
+  const LEVEL_2 = {
+    id: 2,
+    name: 'Livello 2 (test)',
+    grid: { columns: 2, rows: 2 },
+    valueRange: { min: 0, max: 15 },
+    timeLimitSeconds: 90,
+    coveredRatio: 0,
+    requireDecimalPivot: false,
+  };
+
+  it('rigenera le tessere per il nuovo livello e resetta lo stato di gioco del livello, preservando punteggio ed errori', () => {
+    const completed = twoPairState({
+      status: GAME_STATUS.LEVEL_COMPLETE,
+      startedAt: 0,
+      finishedAt: 5000,
+      score: 900,
+      errorCount: 3,
+      selectedTileIds: [],
+      resolvedPairIds: [0, 1],
+    });
+
+    const result = advanceToNextLevel(completed, {
+      level: LEVEL_2,
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 105000,
+    });
+
+    expect(result.status).toBe(GAME_STATUS.PLAYING);
+    expect(result.levelId).toBe(LEVEL_2.id);
+    expect(result.timeLimitSeconds).toBe(LEVEL_2.timeLimitSeconds);
+    expect(result.startedAt).toBe(105000);
+    expect(result.finishedAt).toBeNull();
+    expect(result.selectedTileIds).toEqual([]);
+    expect(result.resolvedPairIds).toEqual([]);
+    expect(result.pendingMismatch).toBe(false);
+    expect(result.tiles).not.toBe(completed.tiles);
+    expect(result.tiles.length).toBeGreaterThan(0);
+    expect(result.score).toBe(900);
+    expect(result.errorCount).toBe(3);
+  });
+
+  it('somma alla durata accumulata esattamente il tempo giocato sul livello concluso (finishedAt - startedAt), non l\'intervallo fino al nuovo startedAt', () => {
+    const completed = twoPairState({
+      status: GAME_STATUS.LEVEL_COMPLETE,
+      startedAt: 0,
+      finishedAt: 5000,
+      elapsedBeforeCurrentLevel: 0,
+    });
+
+    const result = advanceToNextLevel(completed, {
+      level: LEVEL_2,
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 105000, // 100s dopo finishedAt: tempo sulla schermata intermedia
+    });
+
+    expect(result.elapsedBeforeCurrentLevel).toBe(5000);
+  });
+
+  it('è un no-op se lo stato non è LEVEL_COMPLETE', () => {
+    const state = twoPairState({ status: GAME_STATUS.PLAYING });
+    const result = advanceToNextLevel(state, {
+      level: LEVEL_2,
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 105000,
+    });
+    expect(result).toBe(state);
+  });
+});
+
+describe('finishGame', () => {
+  it('porta LEVEL_COMPLETE a WON', () => {
+    const state = twoPairState({ status: GAME_STATUS.LEVEL_COMPLETE, finishedAt: 5000 });
+    const result = finishGame(state);
+    expect(result.status).toBe(GAME_STATUS.WON);
+    expect(result.finishedAt).toBe(5000);
+  });
+
+  it('è un no-op se lo stato non è LEVEL_COMPLETE', () => {
+    const state = twoPairState({ status: GAME_STATUS.PLAYING });
+    expect(finishGame(state)).toBe(state);
+  });
+});
+
+describe('getTotalElapsedSeconds', () => {
+  it('somma la durata dei livelli conclusi al tempo del livello corrente, ignorando le pause sulla schermata intermedia', () => {
+    // Livello A: 5s giocati (startedAt 0 -> finishedAt 5000).
+    const levelACompleted = twoPairState({
+      status: GAME_STATUS.LEVEL_COMPLETE,
+      startedAt: 0,
+      finishedAt: 5000,
+      elapsedBeforeCurrentLevel: 0,
+    });
+
+    // Pausa di 100s sulla schermata intermedia prima di iniziare il Livello B.
+    const levelB = {
+      id: 2,
+      name: 'Livello 2 (test)',
+      grid: { columns: 2, rows: 2 },
+      valueRange: { min: 0, max: 15 },
+      timeLimitSeconds: 90,
+      coveredRatio: 0,
+      requireDecimalPivot: false,
+    };
+    const levelBStarted = advanceToNextLevel(levelACompleted, {
+      level: levelB,
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 105000,
+    });
+
+    // Livello B: altri 5s giocati (startedAt 105000 -> finishedAt 110000).
+    const levelBFinished = { ...levelBStarted, status: GAME_STATUS.LEVEL_COMPLETE, finishedAt: 110000 };
+
+    expect(getTotalElapsedSeconds(levelBFinished, 110000)).toBe(10); // 5s + 5s, non 110s
   });
 });
