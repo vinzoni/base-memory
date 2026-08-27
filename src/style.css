@@ -348,23 +348,20 @@ code {
 
 .board {
   --board-columns: 4; /* fallback prima del primo render */
-  --board-max-columns: 6;
   display: grid;
-  grid-template-columns: repeat(min(var(--board-columns), var(--board-max-columns)), 1fr);
+  /* repeat() richiede un intero letterale: min()/calc() al suo posto rendono
+     l'intera dichiarazione non valida (viene scartata, la griglia ricade
+     sul posizionamento implicito). Il numero di colonne, già ridotto per gli
+     schermi stretti, va quindi risolto in board.js e scritto qui come valore
+     singolo, non calcolato in CSS. */
+  grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
   gap: 12px;
   width: 100%;
   max-width: 640px;
 }
 
-@media (max-width: 640px) {
-  .board {
-    --board-max-columns: 3;
-  }
-}
-
 @media (max-width: 400px) {
   .board {
-    --board-max-columns: 2;
     gap: 8px;
   }
 }
@@ -461,4 +458,22 @@ code {
   .tile__base {
     font-size: 12px;
   }
+}
+
+/* Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-8):
+   a piena larghezza (board 640px) il testo a 22px non entrerebbe nella cella. */
+.board--tight .tile__value {
+  font-size: 16px;
+}
+
+.pivot-warning {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 14px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--accent-bg);
+  color: var(--text-h);
+  font-size: 14px;
+  text-align: left;
 }

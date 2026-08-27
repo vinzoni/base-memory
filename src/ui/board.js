@@ -22,6 +22,22 @@ function tileStateOf(tile, state) {
   return 'default';
 }
 
+// grid-template-columns usa repeat() con un intero letterale (vedi style.css): il
+// tetto di colonne per gli schermi stretti va quindi risolto qui, non con min()/calc()
+// nella regola CSS. Le soglie devono restare sincronizzate con i breakpoint in
+// style.css (400px, 640px).
+const BOARD_COLUMN_BREAKPOINTS = [
+  { maxViewportWidth: 400, maxColumns: 2 },
+  { maxViewportWidth: 640, maxColumns: 3 },
+];
+
+function maxColumnsForViewport(viewportWidth) {
+  const breakpoint = BOARD_COLUMN_BREAKPOINTS.find(
+    ({ maxViewportWidth }) => viewportWidth <= maxViewportWidth
+  );
+  return breakpoint ? breakpoint.maxColumns : 6;
+}
+
 function buildTile(tile, tileState, gameOver, onTileClick) {
   const button = document.createElement('button');
   button.type = 'button';
@@ -68,8 +84,13 @@ export function renderBoard(container, state, { onTileClick }) {
   // non su un tetto fisso. Il conteggio è già garantito fattorizzabile in un
   // rettangolo accettabile per costruzione (generatePairs ha già scartato, se
   // necessario, una coppia): qui non serve altro fallback.
-  const { columns } = findBoardGrid(state.tiles.length);
+  const { columns: idealColumns } = findBoardGrid(state.tiles.length);
+  const columns = Math.min(idealColumns, maxColumnsForViewport(window.innerWidth));
   container.style.setProperty('--board-columns', columns);
+  // Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-8):
+  // a piena larghezza (board 640px) il testo a dimensione piena non entrerebbe nella cella.
+  const WIDE_GRID_COLUMN_THRESHOLD = 6;
+  container.classList.toggle('board--tight', columns >= WIDE_GRID_COLUMN_THRESHOLD);
   const gameOver = state.status !== GAME_STATUS.PLAYING;
 
   state.tiles.forEach((tile) => {
