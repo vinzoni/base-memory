@@ -1,4 +1,7 @@
-export function renderLevelCompleteScreen(container, { state, completedLevel, nextLevel, onContinue }) {
+export function renderLevelCompleteScreen(
+  container,
+  { state, completedLevel, nextLevel, pivotDropped, onContinue }
+) {
   const section = document.createElement('section');
   section.className = 'config-screen';
 
@@ -9,6 +12,14 @@ export function renderLevelCompleteScreen(container, { state, completedLevel, ne
   const summary = document.createElement('p');
   summary.textContent = `Punteggio totale: ${state.score}.`;
   section.appendChild(summary);
+
+  if (pivotDropped) {
+    const pivotWarning = document.createElement('p');
+    pivotWarning.className = 'pivot-warning';
+    pivotWarning.textContent =
+      'Da questo livello alcune coppie richiederanno una conversione diretta tra due basi non decimali, senza passare dal valore intermedio.';
+    section.appendChild(pivotWarning);
+  }
 
   const continueButton = document.createElement('button');
   continueButton.type = 'button';

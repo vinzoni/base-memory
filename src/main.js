@@ -9,7 +9,7 @@ import {
   getTotalElapsedSeconds,
   selectTile,
 } from './core/gameEngine.js';
-import { getLevelById } from './core/levels.js';
+import { LEVELS, getLevelById } from './core/levels.js';
 import { UI_TIMING } from './config.js';
 import { renderBoard } from './ui/board.js';
 import { renderHud } from './ui/hud.js';
@@ -26,6 +26,9 @@ import {
 } from './storage/highScores.js';
 
 const FIRST_LEVEL = getLevelById(1);
+// Non deve dipendere dal solo Livello 1: se in futuro il vincolo pivot si spostasse
+// su altri livelli, l'avviso in configurazione deve restare corretto.
+const HAS_DECIMAL_PIVOT_LEVEL = LEVELS.some((lvl) => lvl.requireDecimalPivot);
 const screens = createScreenManager(document.querySelector('#app'));
 
 // Unico punto dell'app che tocca localStorage: il resto del codice (schermate incluse)
@@ -136,11 +139,15 @@ function showGameScreen(selectedBases) {
 }
 
 function showLevelCompleteScreen(selectedBases, state, nextLevel) {
+  const completedLevel = getLevelById(state.levelId);
+  const pivotDropped = completedLevel.requireDecimalPivot && !nextLevel.requireDecimalPivot;
+
   screens.show((container) =>
     renderLevelCompleteScreen(container, {
       state,
-      completedLevel: getLevelById(state.levelId),
+      completedLevel,
       nextLevel,
+      pivotDropped,
       onContinue: () => showLevel(selectedBases, nextLevel, state),
     })
   );
@@ -199,6 +206,7 @@ function showConfigScreen() {
   screens.show((container) =>
     renderConfigScreen(container, {
       level: FIRST_LEVEL,
+      hasDecimalPivotLevel: HAS_DECIMAL_PIVOT_LEVEL,
       onStart: showGameScreen,
       onShowHighScores: showHighScoresScreen,
     })

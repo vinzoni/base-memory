@@ -41,7 +41,7 @@ function buildStatusText(status) {
   return `${status.message} Con queste basi alcuni numeri si scrivono allo stesso modo e non formano coppie valide.`;
 }
 
-export function renderConfigScreen(container, { level, onStart, onShowHighScores }) {
+export function renderConfigScreen(container, { level, hasDecimalPivotLevel, onStart, onShowHighScores }) {
   const selectedBases = new Set(DEFAULT_SELECTED_BASES);
 
   const section = document.createElement('section');
@@ -81,6 +81,13 @@ export function renderConfigScreen(container, { level, onStart, onShowHighScores
 
   section.appendChild(fieldset);
 
+  const pivotWarning = document.createElement('p');
+  pivotWarning.className = 'pivot-warning';
+  pivotWarning.textContent =
+    'Senza la base decimale il vincolo del pivot non può essere applicato: fin dai primi livelli potrai incontrare conversioni dirette tra basi non decimali. Una modalità più impegnativa.';
+  pivotWarning.hidden = true;
+  section.appendChild(pivotWarning);
+
   const status = document.createElement('p');
   status.className = 'config-screen__status';
   status.setAttribute('role', 'status');
@@ -107,6 +114,7 @@ export function renderConfigScreen(container, { level, onStart, onShowHighScores
     const currentStatus = computeStatus(selectedBases, level);
     status.textContent = buildStatusText(currentStatus);
     startButton.disabled = !currentStatus.canStart;
+    pivotWarning.hidden = !(hasDecimalPivotLevel && !selectedBases.has('DEC'));
   }
 
   update();
