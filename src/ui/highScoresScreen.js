@@ -18,6 +18,9 @@ function buildRow(entry) {
   const scoreCell = document.createElement('td');
   scoreCell.textContent = String(entry.score);
 
+  const levelCell = document.createElement('td');
+  levelCell.textContent = String(entry.levelReached);
+
   const dateCell = document.createElement('td');
   dateCell.textContent = formatDateTime(entry.dateTime);
 
@@ -27,7 +30,7 @@ function buildRow(entry) {
   const timeCell = document.createElement('td');
   timeCell.textContent = formatTime(entry.timeTakenSeconds);
 
-  row.append(nameCell, scoreCell, dateCell, basesCell, timeCell);
+  row.append(nameCell, scoreCell, levelCell, dateCell, basesCell, timeCell);
   return row;
 }
 
@@ -37,7 +40,7 @@ function buildTable(scores) {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  ['Nome', 'Punteggio', 'Data', 'Basi', 'Tempo'].forEach((label) => {
+  ['Nome', 'Punteggio', 'Livello', 'Data', 'Basi', 'Tempo'].forEach((label) => {
     const th = document.createElement('th');
     th.scope = 'col';
     th.textContent = label;
