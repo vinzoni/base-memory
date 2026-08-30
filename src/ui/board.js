@@ -87,7 +87,7 @@ export function renderBoard(container, state, { onTileClick }) {
   const { columns: idealColumns } = findBoardGrid(state.tiles.length);
   const columns = Math.min(idealColumns, maxColumnsForViewport(window.innerWidth));
   container.style.setProperty('--board-columns', columns);
-  // Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-8):
+  // Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-15):
   // a piena larghezza (board 640px) il testo a dimensione piena non entrerebbe nella cella.
   const WIDE_GRID_COLUMN_THRESHOLD = 6;
   container.classList.toggle('board--tight', columns >= WIDE_GRID_COLUMN_THRESHOLD);

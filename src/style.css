@@ -460,7 +460,7 @@ code {
   }
 }
 
-/* Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-8):
+/* Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-15):
    a piena larghezza (board 640px) il testo a 22px non entrerebbe nella cella. */
 .board--tight .tile__value {
   font-size: 16px;

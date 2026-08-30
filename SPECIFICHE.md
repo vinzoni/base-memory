@@ -2,7 +2,7 @@
 
 Gioco didattico web per esercitarsi nelle conversioni tra basi numeriche.
 Struttura ispirata al Memory: una griglia di tessere da accoppiare due a due,
-su una progressione di 8 livelli a difficoltà crescente.
+su una progressione di 15 livelli a difficoltà crescente.
 
 ---
 
@@ -116,14 +116,21 @@ deliberata del giocatore, non un errore. La UI lo segnala in due punti:
 
 | # | Nome | Griglia | Tetto coppie | Valori | Tempo | Copertura | Pivot decimale |
 |---|------|---------|:---:|:---:|:---:|:---:|:---:|
-| 1 | Livello 1 | 4×4 | 8  | 0–15  | 180s | 0   | sì |
-| 2 | Livello 2 | 4×4 | 8  | 0–31  | 180s | 0   | sì |
-| 3 | Livello 3 | 4×4 | 8  | 0–31  | 120s | 0   | sì |
-| 4 | Livello 4 | 5×4 | 10 | 0–63  | 120s | 0   | sì |
-| 5 | Livello 5 | 5×4 | 10 | 0–63  | 120s | 0   | no |
-| 6 | Livello 6 | 6×4 | 12 | 0–255 | 90s  | 0.5 | no |
-| 7 | Livello 7 | 6×5 | 15 | 0–255 | 90s  | 0.5 | no |
-| 8 | Livello 8 | 6×6 | 18 | 0–255 | 75s  | 1   | no |
+| 1  | Livello 1  | 4×4 | 8  | 0–15  | 180s | 0   | sì |
+| 2  | Livello 2  | 4×4 | 8  | 0–31  | 180s | 0   | sì |
+| 3  | Livello 3  | 4×4 | 8  | 0–31  | 120s | 0   | sì |
+| 4  | Livello 4  | 5×4 | 10 | 0–31  | 120s | 0   | sì |
+| 5  | Livello 5  | 5×4 | 10 | 0–63  | 120s | 0   | sì |
+| 6  | Livello 6  | 6×4 | 12 | 0–63  | 120s | 0   | sì |
+| 7  | Livello 7  | 6×4 | 12 | 0–63  | 90s  | 0   | sì |
+| 8  | Livello 8  | 6×4 | 12 | 0–63  | 90s  | 0   | no |
+| 9  | Livello 9  | 6×5 | 15 | 0–63  | 90s  | 0   | no |
+| 10 | Livello 10 | 6×6 | 18 | 0–63  | 90s  | 0   | no |
+| 11 | Livello 11 | 6×6 | 18 | 0–127 | 90s  | 0   | no |
+| 12 | Livello 12 | 6×6 | 18 | 0–127 | 90s  | 0.1 | no |
+| 13 | Livello 13 | 6×6 | 18 | 0–127 | 90s  | 0.3 | no |
+| 14 | Livello 14 | 6×6 | 18 | 0–127 | 90s  | 0.5 | no |
+| 15 | Livello 15 | 6×6 | 18 | 0–127 | 90s  | 1   | no |
 
 Aggiungere un livello deve richiedere **solo** una nuova voce in questo array,
 senza toccare la logica di gioco.
@@ -184,7 +191,7 @@ Regole:
   raggiunto, tempo impiegato.
   - "Livello raggiunto" è l'id dell'ultimo livello **avviato**, non necessariamente
     completato: su una sconfitta è il livello in cui il tempo è scaduto. Con un
-    solo livello (fase di prototipo) la distinzione non contava; con 8 livelli sì.
+    solo livello (fase di prototipo) la distinzione non contava; con 15 livelli sì.
 - A fine partita, se il punteggio entra in classifica, viene chiesto il nome
   (max 20 caratteri, input sanificato prima della visualizzazione).
 - La lettura deve essere difensiva: dati assenti, corrotti o non parsabili non devono
@@ -227,7 +234,7 @@ Requisiti minimi di qualità:
 > sovrapponeva andando a capo). Sostituire `145%` con `1.45` risolverebbe alla
 > radice, ma va fatto rivedendo la spaziatura di tutte le schermate.
 
-> **Limite noto:** alle griglie a 6 colonne (Livelli 6-8) una colonna risulta più
+> **Limite noto:** alle griglie a 6 colonne (Livelli 6-15) una colonna risulta più
 > stretta delle altre e le sue tessere hanno aspect ratio diversa; due tentativi
 > di correzione non hanno risolto e la causa non è ancora individuata.
 
@@ -237,9 +244,9 @@ Requisiti minimi di qualità:
 
 - Backend, account, classifica online.
 - Copertura iniziale delle tessere (`coveredRatio`): il campo è dichiarato nella
-  configurazione di ogni livello (0 nei Livelli 1-5, 0.5 nei Livelli 6-7, 1
-  nell'8) ma non ha alcuna implementazione — nessun modulo lo legge per
-  coprire/nascondere tessere. È un dato riservato per un meccanico non ancora
-  costruito, non un limite da ignorare.
+  configurazione di ogni livello (0 nei Livelli 1-11, 0.1 nel 12, 0.3 nel 13,
+  0.5 nel 14, 1 nel 15) ma non ha alcuna implementazione — nessun modulo lo
+  legge per coprire/nascondere tessere. È un dato riservato per un meccanico
+  non ancora costruito, non un limite da ignorare.
 - Audio, animazioni elaborate, temi grafici multipli.
 - Internazionalizzazione: la UI è in italiano.
