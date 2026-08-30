@@ -234,9 +234,13 @@ Requisiti minimi di qualità:
 > sovrapponeva andando a capo). Sostituire `145%` con `1.45` risolverebbe alla
 > radice, ma va fatto rivedendo la spaziatura di tutte le schermate.
 
-> **Limite noto:** alle griglie a 6 colonne (Livelli 6-15) una colonna risulta più
-> stretta delle altre e le sue tessere hanno aspect ratio diversa; due tentativi
-> di correzione non hanno risolto e la causa non è ancora individuata.
+> **Limite noto:** alle griglie a 6 colonne (Livelli 6-15) una colonna poteva
+> risultare più stretta delle altre, con le sue tessere ad aspect ratio diversa;
+> due tentativi di correzione non hanno risolto e la causa non è mai stata
+> individuata. Il difetto non si manifesta più da quando il range massimo è
+> stato ridotto a 0–127 (Livello 15 incluso): un valore binario a 7 cifre entra
+> nella cella senza che nessuna tessera reclami spazio extra. Tornerebbe se un
+> livello futuro alzasse di nuovo il range oltre 127.
 
 ---
 

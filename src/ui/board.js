@@ -87,8 +87,11 @@ export function renderBoard(container, state, { onTileClick }) {
   const { columns: idealColumns } = findBoardGrid(state.tiles.length);
   const columns = Math.min(idealColumns, maxColumnsForViewport(window.innerWidth));
   container.style.setProperty('--board-columns', columns);
-  // Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-15):
-  // a piena larghezza (board 640px) il testo a dimensione piena non entrerebbe nella cella.
+  // Il font si riduce da 6 colonne in poi (Livelli 6-15): con range fino a 0-255
+  // le tessere potevano mostrare binari a 8 cifre, che a piena larghezza (board
+  // 640px) non entravano nella cella. Il range massimo è ora 0-127 (7 cifre) e il
+  // difetto non si manifesta più, ma la causa non è mai stata individuata
+  // (SPECIFICHE.md §7): tornerebbe alzando di nuovo il range.
   const WIDE_GRID_COLUMN_THRESHOLD = 6;
   container.classList.toggle('board--tight', columns >= WIDE_GRID_COLUMN_THRESHOLD);
   const gameOver = state.status !== GAME_STATUS.PLAYING;

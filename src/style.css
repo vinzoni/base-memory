@@ -460,8 +460,11 @@ code {
   }
 }
 
-/* Da 6 colonne in poi le tessere ospitano valori binari a 8 cifre (Livelli 6-15):
-   a piena larghezza (board 640px) il testo a 22px non entrerebbe nella cella. */
+/* Il font si riduce da 6 colonne in poi (Livelli 6-15): con range fino a 0-255
+   le tessere potevano mostrare binari a 8 cifre a 22px, che non entravano nella
+   cella. Il range massimo è ora 0-127 (7 cifre) e il difetto non si manifesta
+   più, ma la causa non è mai stata individuata (SPECIFICHE.md §7): tornerebbe
+   alzando di nuovo il range. */
 .board--tight .tile__value {
   font-size: 16px;
 }
