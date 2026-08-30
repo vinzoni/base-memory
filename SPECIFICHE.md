@@ -2,7 +2,8 @@
 
 Gioco didattico web per esercitarsi nelle conversioni tra basi numeriche.
 Struttura ispirata al Memory: una griglia di tessere da accoppiare due a due,
-su una progressione di 15 livelli a difficoltà crescente.
+su una progressione di 18 livelli organizzata in due cicli di difficoltà
+crescente (si veda §4, "Struttura a cicli").
 
 ---
 
@@ -127,8 +128,9 @@ visibili per tutta la durata del livello.
   tessera sia coperta e l'altra scoperta;
 - il conteggio (`tiles.length × coveredRatio`) è arrotondato all'intero più
   vicino; con le tessere sempre generate in coppie, `coveredRatio` 0.5 dà
-  sempre un conteggio esatto, mentre rapporti come 0.1/0.3 (Livelli 12/13)
-  possono arrotondare a un numero dispari — voluto, non un difetto;
+  sempre un conteggio esatto, mentre rapporti come 0.1/0.3 (Livelli 14/15, su
+  una griglia 6×6 da 36 tessere) possono arrotondare a un numero dispari —
+  voluto, non un difetto;
 - cliccando una tessera coperta, questa si scopre e resta visibile finché non
   viene selezionata la seconda tessera;
 - se le due non si accoppiano, le tessere coperte tornano a faccia in giù dopo
@@ -147,32 +149,57 @@ visibili per tutta la durata del livello.
 > tempo. Non risolto di proposito: riguarda solo chi vuole barare
 > deliberatamente, non l'uso normale né l'accessibilità.
 
+### Struttura a cicli
+
+I 18 livelli sono organizzati in **due cicli**: la stessa sequenza di gradini
+di difficoltà (tempo, griglia, vincolo pivot, copertura) si ripete
+identica, ma a un `valueRange` via via più ampio. Il giocatore rivede lo
+stesso tipo di progressione con numeri più grandi, invece di vedere ogni asse
+di difficoltà salire una volta sola lungo tutta la partita.
+
+Il tetto di griglia raggiungibile in un ciclo dipende da quanti valori del suo
+`valueRange` sono utilizzabili (si veda "Numero di coppie effettivo" sopra),
+**non** è una scelta arbitraria:
+
+- **primo ciclo** (`valueRange` 0–15): anche con la combinazione di basi
+  migliore (DEC+BIN, DEC+BIN+HEX o tutte e quattro) restano solo 14 valori
+  utilizzabili su 16 — 0 e 1 si scrivono uguali in ogni base (vincolo §2.2).
+  14 non basta a riempire un tetto di 18 coppie (griglia 6×6): il ciclo non
+  supera quindi la griglia 6×4 (12 coppie);
+- **secondo ciclo** (`valueRange` 0–31): 30 valori utilizzabili sbloccano
+  comodamente il tetto 6×6 (18 coppie).
+
+> **Limite noto:** con `valueRange` 0–15 (Livelli 1-2), DEC+HEX lascia solo 6
+> valori utilizzabili (10–15: 0–9 hanno la stessa rappresentazione in DEC ed
+> HEX) — sotto il tetto di ogni livello del primo ciclo. DEC+OCT e OCT+HEX ne
+> lasciano 8 (8–15): ogni partita con queste combinazioni userà sempre gli
+> stessi numeri e varierà solo l'assegnazione delle basi tra le tessere.
+
 ### Tabella livelli
 
 | # | Nome | Griglia | Tetto coppie | Valori | Tempo | Copertura | Pivot decimale |
 |---|------|---------|:---:|:---:|:---:|:---:|:---:|
-| 1  | Livello 1  | 4×4 | 8  | 0–15  | 180s | 0   | sì |
-| 2  | Livello 2  | 4×4 | 8  | 0–31  | 180s | 0   | sì |
-| 3  | Livello 3  | 4×4 | 8  | 0–31  | 120s | 0   | sì |
-| 4  | Livello 4  | 5×4 | 10 | 0–31  | 120s | 0   | sì |
-| 5  | Livello 5  | 5×4 | 10 | 0–63  | 120s | 0   | sì |
-| 6  | Livello 6  | 6×4 | 12 | 0–63  | 120s | 0   | sì |
-| 7  | Livello 7  | 6×4 | 12 | 0–63  | 90s  | 0   | sì |
-| 8  | Livello 8  | 6×4 | 12 | 0–63  | 90s  | 0   | no |
-| 9  | Livello 9  | 6×5 | 15 | 0–63  | 90s  | 0   | no |
-| 10 | Livello 10 | 6×6 | 18 | 0–63  | 90s  | 0   | no |
-| 11 | Livello 11 | 6×6 | 18 | 0–127 | 90s  | 0   | no |
-| 12 | Livello 12 | 6×6 | 18 | 0–127 | 90s  | 0.1 | no |
-| 13 | Livello 13 | 6×6 | 18 | 0–127 | 90s  | 0.3 | no |
-| 14 | Livello 14 | 6×6 | 18 | 0–127 | 90s  | 0.5 | no |
-| 15 | Livello 15 | 6×6 | 18 | 0–127 | 90s  | 1   | no |
+| 1  | Livello 1  | 4×4 | 8  | 0–15 | 180s | 0   | sì |
+| 2  | Livello 2  | 4×4 | 8  | 0–15 | 120s | 0   | sì |
+| 3  | Livello 3  | 6×4 | 12 | 0–15 | 120s | 0   | sì |
+| 4  | Livello 4  | 6×4 | 12 | 0–15 | 120s | 0   | no |
+| 5  | Livello 5  | 6×4 | 12 | 0–15 | 120s | 0.3 | no |
+| 6  | Livello 6  | 6×4 | 12 | 0–15 | 120s | 0.5 | no |
+| 7  | Livello 7  | 6×4 | 12 | 0–15 | 120s | 1   | no |
+| 8  | Livello 8  | 6×4 | 12 | 0–15 | 90s  | 1   | no |
+| 9  | Livello 9  | 4×4 | 8  | 0–31 | 180s | 0   | sì |
+| 10 | Livello 10 | 4×4 | 8  | 0–31 | 120s | 0   | sì |
+| 11 | Livello 11 | 6×4 | 12 | 0–31 | 120s | 0   | sì |
+| 12 | Livello 12 | 6×6 | 18 | 0–31 | 120s | 0   | sì |
+| 13 | Livello 13 | 6×6 | 18 | 0–31 | 120s | 0   | no |
+| 14 | Livello 14 | 6×6 | 18 | 0–31 | 120s | 0.1 | no |
+| 15 | Livello 15 | 6×6 | 18 | 0–31 | 120s | 0.3 | no |
+| 16 | Livello 16 | 6×6 | 18 | 0–31 | 120s | 0.5 | no |
+| 17 | Livello 17 | 6×6 | 18 | 0–31 | 120s | 1   | no |
+| 18 | Livello 18 | 6×6 | 18 | 0–31 | 90s  | 1   | no |
 
-Aggiungere un livello deve richiedere **solo** una nuova voce in questo array,
-senza toccare la logica di gioco.
-
-> **Limite noto:** con `valueRange` 0–15 (Livello 1), DEC+OCT e OCT+HEX lasciano
-> esattamente 8 valori utilizzabili (8–15): ogni partita userà sempre gli stessi
-> numeri e varierà solo l'assegnazione delle basi tra le tessere.
+Aggiungere un livello (o un ciclo) deve richiedere **solo** una nuova voce in
+questo array, senza toccare la logica di gioco.
 
 Nota didattica: al Livello 1 le tessere sono **tutte scoperte** (`coveredRatio: 0`).
 Individuare le coppie leggendo i numeri è già un esercizio sufficientemente
@@ -226,7 +253,7 @@ Regole:
   raggiunto, tempo impiegato.
   - "Livello raggiunto" è l'id dell'ultimo livello **avviato**, non necessariamente
     completato: su una sconfitta è il livello in cui il tempo è scaduto. Con un
-    solo livello (fase di prototipo) la distinzione non contava; con 15 livelli sì.
+    solo livello (fase di prototipo) la distinzione non contava; con 18 livelli sì.
 - A fine partita, se il punteggio entra in classifica, viene chiesto il nome
   (max 20 caratteri, input sanificato prima della visualizzazione).
 - La lettura deve essere difensiva: dati assenti, corrotti o non parsabili non devono
@@ -273,13 +300,13 @@ Requisiti minimi di qualità:
 > sovrapponeva andando a capo). Sostituire `145%` con `1.45` risolverebbe alla
 > radice, ma va fatto rivedendo la spaziatura di tutte le schermate.
 
-> **Limite noto:** alle griglie a 6 colonne (Livelli 6-15) una colonna poteva
-> risultare più stretta delle altre, con le sue tessere ad aspect ratio diversa;
-> due tentativi di correzione non hanno risolto e la causa non è mai stata
-> individuata. Il difetto non si manifesta più da quando il range massimo è
-> stato ridotto a 0–127 (Livello 15 incluso): un valore binario a 7 cifre entra
-> nella cella senza che nessuna tessera reclami spazio extra. Tornerebbe se un
-> livello futuro alzasse di nuovo il range oltre 127.
+> **Limite noto:** alle griglie a 6 colonne (Livelli 3-8 e 11-18) una colonna
+> poteva risultare più stretta delle altre, con le sue tessere ad aspect ratio
+> diversa; due tentativi di correzione non hanno risolto e la causa non è mai
+> stata individuata. Il difetto non si manifesta più da quando il range
+> massimo è sceso a 0–31 (secondo ciclo, Livello 18 incluso): un valore
+> binario a 5 cifre entra nella cella senza che nessuna tessera reclami spazio
+> extra. Tornerebbe se un livello o un ciclo futuro alzasse di nuovo il range.
 
 ---
 

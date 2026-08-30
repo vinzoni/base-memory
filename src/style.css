@@ -473,11 +473,11 @@ code {
   }
 }
 
-/* Il font si riduce da 6 colonne in poi (Livelli 6-15): con range fino a 0-255
-   le tessere potevano mostrare binari a 8 cifre a 22px, che non entravano nella
-   cella. Il range massimo è ora 0-127 (7 cifre) e il difetto non si manifesta
-   più, ma la causa non è mai stata individuata (SPECIFICHE.md §7): tornerebbe
-   alzando di nuovo il range. */
+/* Il font si riduce da 6 colonne in poi (Livelli 3-8 e 11-18): con range fino
+   a 0-255 le tessere potevano mostrare binari a 8 cifre a 22px, che non
+   entravano nella cella. Il range massimo è ora 0-31 (5 cifre) e il difetto
+   non si manifesta più, ma la causa non è mai stata individuata
+   (SPECIFICHE.md §7): tornerebbe alzando di nuovo il range. */
 .board--tight .tile__value {
   font-size: 16px;
 }

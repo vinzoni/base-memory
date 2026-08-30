@@ -3,8 +3,8 @@ import { LEVELS, getLevelById } from '../src/core/levels.js';
 import { findBoardGrid, getGridPairCap, getPlayablePairCount } from '../src/core/pairGenerator.js';
 
 describe('levels', () => {
-  it('espone la progressione completa, dal Livello 1 al Livello 15', () => {
-    expect(LEVELS).toHaveLength(15);
+  it('espone la progressione completa, dal Livello 1 al Livello 18', () => {
+    expect(LEVELS).toHaveLength(18);
     expect(LEVELS[0]).toEqual({
       id: 1,
       name: 'Livello 1',
