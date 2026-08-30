@@ -1,4 +1,4 @@
-import { generatePairs } from './pairGenerator.js';
+import { generatePairs, shuffle } from './pairGenerator.js';
 import { scoreLevelCompletion, scorePairError, scorePairMatch } from './scoring.js';
 
 export const GAME_STATUS = {
@@ -8,11 +8,29 @@ export const GAME_STATUS = {
   LOST: 'lost',
 };
 
+// Selezione individuale (non a coppie): è legittimo che di una coppia una sola
+// tessera sia coperta. coveredCount = Math.round(tiles.length * coveredRatio):
+// arrotonda all'intero più vicino. Le tessere sono sempre generate in coppie
+// (tiles.length pari), quindi con coveredRatio 0.5 il prodotto è sempre un
+// intero esatto e Math.round non introduce ambiguità. Con rapporti non
+// "puliti" (es. 0.1/0.3 su 36 tessere: 3.6 -> 4, 10.8 -> 11) il conteggio può
+// risultare dispari: è voluto, non un difetto. Significa che almeno una
+// coppia avrà una tessera coperta e l'altra scoperta, coerente con la
+// selezione individuale.
+function pickCoveredTileIds(tiles, coveredRatio, random) {
+  const coveredCount = Math.round(tiles.length * coveredRatio);
+  return shuffle(tiles, random)
+    .slice(0, coveredCount)
+    .map((tile) => tile.id);
+}
+
 export function createGame({ level, selectedBases, random = Math.random, startedAt }) {
+  const tiles = generatePairs(level, selectedBases, random);
   return {
     levelId: level.id,
     elapsedBeforeCurrentLevel: 0,
-    tiles: generatePairs(level, selectedBases, random),
+    tiles,
+    coveredTileIds: pickCoveredTileIds(tiles, level.coveredRatio, random),
     timeLimitSeconds: level.timeLimitSeconds,
     startedAt,
     finishedAt: null,
@@ -31,11 +49,13 @@ export function createGame({ level, selectedBases, random = Math.random, started
 // l'altro non deve contare come tempo di gioco.
 export function advanceToNextLevel(state, { level, selectedBases, random = Math.random, startedAt }) {
   if (state.status !== GAME_STATUS.LEVEL_COMPLETE) return state;
+  const tiles = generatePairs(level, selectedBases, random);
   return {
     ...state,
     levelId: level.id,
     elapsedBeforeCurrentLevel: state.elapsedBeforeCurrentLevel + (state.finishedAt - state.startedAt),
-    tiles: generatePairs(level, selectedBases, random),
+    tiles,
+    coveredTileIds: pickCoveredTileIds(tiles, level.coveredRatio, random),
     timeLimitSeconds: level.timeLimitSeconds,
     startedAt,
     finishedAt: null,
@@ -78,6 +98,21 @@ export function checkTimeout(state, now) {
   if (state.status !== GAME_STATUS.PLAYING) return state;
   if (!isTimeUp(state, now)) return state;
   return { ...state, status: GAME_STATUS.LOST, finishedAt: now };
+}
+
+// Copertura derivata dallo stato corrente, non da un flag mutato durante la
+// partita: coveredTileIds è fissato una volta sola alla creazione/avanzamento
+// del livello (vedi pickCoveredTileIds) e non viene mai più toccato. Una
+// tessera risolta o attualmente selezionata è sempre scoperta; altrimenti lo
+// è se e solo se era tra quelle scelte come coperte. Questo basta a coprire da
+// solo tutti i casi (scopertura al click, ricopertura dopo acknowledgeMismatch,
+// copertura permanente delle coppie risolte) senza logica aggiuntiva altrove.
+export function isTileCovered(state, tileId) {
+  const tile = state.tiles.find((t) => t.id === tileId);
+  if (!tile) return false;
+  if (state.resolvedPairIds.includes(tile.pairId)) return false;
+  if (state.selectedTileIds.includes(tileId)) return false;
+  return state.coveredTileIds.includes(tileId);
 }
 
 export function acknowledgeMismatch(state) {

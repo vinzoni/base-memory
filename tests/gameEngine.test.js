@@ -9,6 +9,7 @@ import {
   getElapsedSeconds,
   getRemainingSeconds,
   getTotalElapsedSeconds,
+  isTileCovered,
   selectTile,
 } from '../src/core/gameEngine.js';
 import { LEVELS } from '../src/core/levels.js';
@@ -43,6 +44,7 @@ function twoPairState(overrides = {}) {
     timeLimitSeconds: 180,
     startedAt: 0,
     finishedAt: null,
+    coveredTileIds: [],
     selectedTileIds: [],
     resolvedPairIds: [],
     pendingMismatch: false,
@@ -82,6 +84,70 @@ describe('createGame', () => {
     expect(state.tiles.length).toBeGreaterThan(0);
     expect(state.levelId).toBe(LEVEL_1.id);
     expect(state.elapsedBeforeCurrentLevel).toBe(0);
+    expect(state.coveredTileIds).toEqual([]); // Livello 1: coveredRatio 0
+  });
+});
+
+describe('createGame — coveredTileIds (copertura iniziale)', () => {
+  it('con coveredRatio 0 nessuna tessera è coperta', () => {
+    const state = createGame({
+      level: { ...LEVEL_1, coveredRatio: 0 },
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 0,
+    });
+
+    expect(state.coveredTileIds).toEqual([]);
+  });
+
+  it('con coveredRatio 1 tutte le tessere sono coperte', () => {
+    const state = createGame({
+      level: { ...LEVEL_1, coveredRatio: 1 },
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 0,
+    });
+
+    expect(new Set(state.coveredTileIds)).toEqual(new Set(state.tiles.map((tile) => tile.id)));
+  });
+
+  it('con coveredRatio 0.5 copre esattamente metà delle tessere, arrotondamento incluso', () => {
+    const state = createGame({
+      level: { ...LEVEL_1, coveredRatio: 0.5 },
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 0,
+    });
+
+    // Le tessere sono sempre generate in coppie (tiles.length pari): con
+    // coveredRatio 0.5 il conteggio è quindi sempre un intero esatto.
+    expect(state.coveredTileIds.length).toBe(state.tiles.length / 2);
+  });
+
+  it('sceglie le tessere coperte individualmente: è legittimo che di una coppia una sola sia coperta', () => {
+    const state = createGame({
+      level: { ...LEVEL_1, coveredRatio: 0.5 },
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(7),
+      startedAt: 0,
+    });
+
+    const coveredCountByPair = new Map();
+    state.tiles.forEach((tile) => {
+      if (state.coveredTileIds.includes(tile.id)) {
+        coveredCountByPair.set(tile.pairId, (coveredCountByPair.get(tile.pairId) ?? 0) + 1);
+      }
+    });
+
+    expect([...coveredCountByPair.values()].some((count) => count === 1)).toBe(true);
+  });
+
+  it('con lo stesso seed le tessere scelte come coperte sono le stesse', () => {
+    const level = { ...LEVEL_1, coveredRatio: 0.5 };
+    const stateA = createGame({ level, selectedBases: ['DEC', 'BIN'], random: mulberry32(42), startedAt: 0 });
+    const stateB = createGame({ level, selectedBases: ['DEC', 'BIN'], random: mulberry32(42), startedAt: 0 });
+
+    expect(stateB.coveredTileIds).toEqual(stateA.coveredTileIds);
   });
 });
 
@@ -166,6 +232,48 @@ describe('acknowledgeMismatch', () => {
   it('è un no-op se non c\'è un errore pendente', () => {
     const state = twoPairState();
     expect(acknowledgeMismatch(state)).toBe(state);
+  });
+});
+
+describe('isTileCovered', () => {
+  it('una tessera scelta come coperta e non ancora selezionata è coperta', () => {
+    const state = twoPairState({ coveredTileIds: ['p0-DEC'] });
+    expect(isTileCovered(state, 'p0-DEC')).toBe(true);
+  });
+
+  it('una tessera non scelta come coperta non è mai coperta', () => {
+    const state = twoPairState({ coveredTileIds: [] });
+    expect(isTileCovered(state, 'p0-DEC')).toBe(false);
+  });
+
+  it('la selezione scopre una tessera coperta', () => {
+    const state = twoPairState({ coveredTileIds: ['p0-DEC'] });
+    const afterSelect = selectTile(state, 'p0-DEC', 1000);
+    expect(isTileCovered(afterSelect, 'p0-DEC')).toBe(false);
+  });
+
+  it('un errore ricopre le tessere coperte selezionate, ma solo dopo acknowledgeMismatch', () => {
+    const state = twoPairState({ coveredTileIds: ['p0-DEC', 'p1-DEC'] });
+    const afterFirst = selectTile(state, 'p0-DEC', 1000);
+    const mismatched = selectTile(afterFirst, 'p1-DEC', 2000);
+
+    // Durante il feedback d'errore restano scoperte.
+    expect(isTileCovered(mismatched, 'p0-DEC')).toBe(false);
+    expect(isTileCovered(mismatched, 'p1-DEC')).toBe(false);
+
+    const cleared = acknowledgeMismatch(mismatched);
+    expect(isTileCovered(cleared, 'p0-DEC')).toBe(true);
+    expect(isTileCovered(cleared, 'p1-DEC')).toBe(true);
+  });
+
+  it('una coppia risolta resta scoperta per sempre, anche se le tessere erano coperte', () => {
+    const state = twoPairState({ coveredTileIds: ['p0-DEC', 'p0-BIN'] });
+    const afterFirst = selectTile(state, 'p0-DEC', 1000);
+    const resolved = selectTile(afterFirst, 'p0-BIN', 2000);
+
+    expect(resolved.resolvedPairIds).toEqual([0]);
+    expect(isTileCovered(resolved, 'p0-DEC')).toBe(false);
+    expect(isTileCovered(resolved, 'p0-BIN')).toBe(false);
   });
 });
 
@@ -360,6 +468,26 @@ describe('advanceToNextLevel', () => {
       startedAt: 105000,
     });
     expect(result).toBe(state);
+  });
+
+  it('ricalcola coveredTileIds secondo il coveredRatio del nuovo livello, non quello del precedente', () => {
+    const completed = twoPairState({
+      status: GAME_STATUS.LEVEL_COMPLETE,
+      startedAt: 0,
+      finishedAt: 5000,
+      coveredTileIds: [],
+      resolvedPairIds: [0, 1],
+    });
+
+    const levelWithFullCoverage = { ...LEVEL_2, coveredRatio: 1 };
+    const result = advanceToNextLevel(completed, {
+      level: levelWithFullCoverage,
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 105000,
+    });
+
+    expect(new Set(result.coveredTileIds)).toEqual(new Set(result.tiles.map((tile) => tile.id)));
   });
 });
 

@@ -46,6 +46,10 @@ Questi punti sono la parte difficile del gioco e vanno rispettati alla lettera.
    impedire l'avvio con meno di 2.
 6. Le cifre esadecimali sono maiuscole (`A`–`F`). Nessun prefisso tipo `0x` o `0b`:
    la base è comunicata dall'etichetta.
+7. **Una tessera coperta non ancora selezionata non deve esporre valore o base nel
+   DOM**: né nel testo, né nell'`aria-label`, né in attributi `data-*`. Il gioco
+   sarebbe altrimenti aggirabile ispezionando la pagina o con un lettore di
+   schermo. Si veda `coveredRatio` in §4.
 
 ---
 
@@ -74,7 +78,7 @@ sono:
 | `grid: { columns, rows }` | dimensione obiettivo della griglia: il tetto di coppie è `columns × rows / 2` |
 | `valueRange` | intervallo dei valori sorteggiati: più ampio = più difficile |
 | `timeLimitSeconds` | tempo a disposizione per il livello: più basso = più difficile |
-| `coveredRatio` | frazione di tessere da coprire inizialmente (0 = tutte visibili) — **dichiarato ma non ancora implementato**, si veda §8 |
+| `coveredRatio` | frazione di tessere coperte all'inizio del livello (0 = tutte visibili), si veda sotto |
 | `requireDecimalPivot` | vincolo di accoppiamento aggiuntivo, si veda sotto |
 
 ### Numero di coppie effettivo
@@ -111,6 +115,37 @@ deliberata del giocatore, non un errore. La UI lo segnala in due punti:
 - nella schermata di fine livello, quando il livello appena concluso richiedeva il
   vincolo e quello successivo no, un avviso spiega che da quel momento le coppie
   possono richiedere conversioni dirette tra basi non decimali.
+
+### Copertura iniziale delle tessere (`coveredRatio`)
+
+Un terzo asse di difficoltà, indipendente da `valueRange`/`timeLimitSeconds`/
+`requireDecimalPivot`: alla creazione del livello, una frazione `coveredRatio`
+delle tessere viene scelta a caso e messa a faccia in giù. Le altre restano
+visibili per tutta la durata del livello.
+
+- la scelta è **individuale**, non a coppie: è legittimo che di una coppia una
+  tessera sia coperta e l'altra scoperta;
+- il conteggio (`tiles.length × coveredRatio`) è arrotondato all'intero più
+  vicino; con le tessere sempre generate in coppie, `coveredRatio` 0.5 dà
+  sempre un conteggio esatto, mentre rapporti come 0.1/0.3 (Livelli 12/13)
+  possono arrotondare a un numero dispari — voluto, non un difetto;
+- cliccando una tessera coperta, questa si scopre e resta visibile finché non
+  viene selezionata la seconda tessera;
+- se le due non si accoppiano, le tessere coperte tornano a faccia in giù dopo
+  il feedback di errore, come nel Memory classico;
+- una coppia risolta resta visibile per sempre, anche se una o entrambe le
+  tessere erano coperte;
+- quali tessere sono coperte è deciso una sola volta, alla creazione del
+  livello, con lo stesso generatore casuale iniettato usato per generare le
+  coppie: non cambia ridisegnando la schermata.
+
+> **Limite noto:** la posizione di una tessera coperta nel DOM coincide sempre
+> con il suo indice nell'elenco delle tessere del livello ed è stabile per
+> tutta la sua durata. Anche se valore e base non sono mai esposti (si veda
+> §2.7), chi ispeziona deliberatamente la struttura della pagina può comunque
+> dedurre informazioni su una tessera coperta correlando la sua posizione nel
+> tempo. Non risolto di proposito: riguarda solo chi vuole barare
+> deliberatamente, non l'uso normale né l'accessibilità.
 
 ### Tabella livelli
 
@@ -217,7 +252,11 @@ Requisiti minimi di qualità:
 - il feedback non deve basarsi **solo** sul colore (aggiungere icona o bordo),
   per accessibilità;
 - tessere raggiungibili da tastiera (`Tab` + `Invio`/`Spazio`) con `aria-label`
-  che includa valore e base;
+  che includa valore e base — tranne le tessere coperte (`coveredRatio`, si
+  veda §4), il cui `aria-label` deve indicare solo che sono coperte;
+- il dorso delle tessere coperte è uniforme (stessa resa per tutte,
+  indipendentemente da valore o base) e distinguibile a colpo d'occhio da una
+  tessera scoperta;
 - avviso visivo quando il tempo scende sotto i 30 secondi;
 - durante l'animazione di errore l'input è bloccato, per evitare doppi click che
   contano errori multipli;
@@ -247,10 +286,5 @@ Requisiti minimi di qualità:
 ## 8. Fuori perimetro
 
 - Backend, account, classifica online.
-- Copertura iniziale delle tessere (`coveredRatio`): il campo è dichiarato nella
-  configurazione di ogni livello (0 nei Livelli 1-11, 0.1 nel 12, 0.3 nel 13,
-  0.5 nel 14, 1 nel 15) ma non ha alcuna implementazione — nessun modulo lo
-  legge per coprire/nascondere tessere. È un dato riservato per un meccanico
-  non ancora costruito, non un limite da ignorare.
 - Audio, animazioni elaborate, temi grafici multipli.
 - Internazionalizzazione: la UI è in italiano.

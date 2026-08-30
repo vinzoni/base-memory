@@ -1,5 +1,5 @@
 import { BASES } from '../core/bases.js';
-import { GAME_STATUS } from '../core/gameEngine.js';
+import { GAME_STATUS, isTileCovered } from '../core/gameEngine.js';
 import { findBoardGrid } from '../core/pairGenerator.js';
 
 const STATE_LABELS = {
@@ -19,6 +19,7 @@ function tileStateOf(tile, state) {
   if (state.selectedTileIds.includes(tile.id)) {
     return state.pendingMismatch ? 'error' : 'selected';
   }
+  if (isTileCovered(state, tile.id)) return 'covered';
   return 'default';
 }
 
@@ -42,10 +43,27 @@ function buildTile(tile, tileState, gameOver, onTileClick) {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = `tile tile--${tileState}`;
-  button.dataset.tileId = tile.id;
   // Una tessera risolta non è più selezionabile (SPECIFICHE.md §1); a partita
   // finita disabilitiamo tutto per non lasciare bottoni "vivi" che non fanno nulla.
   button.disabled = tileState === 'resolved' || gameOver;
+  // Il listener chiude su tile.id via closure (valore JS, non letto dal DOM):
+  // vale identico per il ramo coperto, che non deve esporre nient'altro.
+  button.addEventListener('click', () => onTileClick(tile.id));
+
+  if (tileState === 'covered') {
+    // Niente valore, base o dataset.tileId nel DOM (SPECIFICHE.md §2): il
+    // formato di tile.id ("pairId-baseId", vedi pairGenerator.js) rivelerebbe
+    // la base della tessera anche a partita ferma, solo ispezionando la pagina.
+    const coverIcon = document.createElement('span');
+    coverIcon.className = 'tile__cover-icon';
+    coverIcon.setAttribute('aria-hidden', 'true');
+    coverIcon.textContent = '?';
+    button.appendChild(coverIcon);
+    button.setAttribute('aria-label', 'Tessera coperta');
+    return button;
+  }
+
+  button.dataset.tileId = tile.id;
 
   const icon = STATE_ICONS[tileState];
   if (icon) {
@@ -72,8 +90,6 @@ function buildTile(tile, tileState, gameOver, onTileClick) {
     'aria-label',
     `Valore ${tile.display}, base ${baseLabel}${stateLabel ? `, ${stateLabel}` : ''}`
   );
-
-  button.addEventListener('click', () => onTileClick(tile.id));
 
   return button;
 }
