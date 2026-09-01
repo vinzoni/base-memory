@@ -10,7 +10,7 @@ import {
   selectTile,
 } from './core/gameEngine.js';
 import { LEVELS, getLevelById } from './core/levels.js';
-import { UI_TIMING } from './config.js';
+import { MIN_BASES_FOR_OPERATIVE_PIVOT, UI_TIMING } from './config.js';
 import { renderBoard } from './ui/board.js';
 import { renderHud } from './ui/hud.js';
 import { renderConfigScreen } from './ui/configScreen.js';
@@ -30,6 +30,18 @@ const FIRST_LEVEL = getLevelById(1);
 // su altri livelli, l'avviso in configurazione deve restare corretto.
 const HAS_DECIMAL_PIVOT_LEVEL = LEVELS.some((lvl) => lvl.requireDecimalPivot);
 const screens = createScreenManager(document.querySelector('#app'));
+
+// Il vincolo pivot decimale restringe davvero la generazione delle coppie solo
+// quando DEC è tra le basi selezionate (senza, applyDecimalPivot lo ignora) e le
+// basi sono almeno tre (con due, l'unica coppia possibile contiene già entrambe).
+// Fuori da questi casi il vincolo non stava togliendo nulla: passare a un livello
+// che non lo richiede non cambia niente per il giocatore, e l'avviso sarebbe
+// fuorviante.
+function decimalPivotWasOperative(selectedBases) {
+  return (
+    selectedBases.includes('DEC') && selectedBases.length >= MIN_BASES_FOR_OPERATIVE_PIVOT
+  );
+}
 
 // Unico punto dell'app che tocca localStorage: il resto del codice (schermate incluse)
 // riceve solo funzioni già legate allo storage o dati già letti.
@@ -140,7 +152,10 @@ function showGameScreen(selectedBases) {
 
 function showLevelCompleteScreen(selectedBases, state, nextLevel) {
   const completedLevel = getLevelById(state.levelId);
-  const pivotDropped = completedLevel.requireDecimalPivot && !nextLevel.requireDecimalPivot;
+  const pivotDropped =
+    completedLevel.requireDecimalPivot &&
+    !nextLevel.requireDecimalPivot &&
+    decimalPivotWasOperative(selectedBases);
 
   screens.show((container) =>
     renderLevelCompleteScreen(container, {

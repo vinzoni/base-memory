@@ -8,6 +8,11 @@ export const SCORING = {
 export const MIN_SELECTABLE_BASES = 2;
 export const DEFAULT_SELECTED_BASES = ['DEC', 'BIN'];
 
+// Sotto le 3 basi selezionate il vincolo pivot decimale non restringe nulla:
+// l'unica coppia di basi possibile contiene già entrambe le basi scelte. Serve
+// a decidere se l'avviso "il pivot decade" ha davvero qualcosa da segnalare.
+export const MIN_BASES_FOR_OPERATIVE_PIVOT = 3;
+
 // Rapporto massimo lato lungo/lato corto per considerare una griglia di gioco
 // "giocabile": oltre questa soglia il rettangolo risulta troppo allungato.
 export const MAX_BOARD_ASPECT_RATIO = 2;
