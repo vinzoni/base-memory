@@ -2,31 +2,33 @@
    solo via var(): per tornare al tema chiaro basta sostituire questo blocco con
    quello commentato più sotto, senza toccare nessun'altra regola. */
 :root {
-  --bg: #131022;                              /* fondo scuro profondo */
-  --surface: #1b1533;                         /* sfondo delle schermate sopra --bg */
-  --panel: #2a2350;                           /* riempimento pannelli, viola più chiaro */
-  --panel-border: #5b4da8;                    /* cornice chiara esterna dei pannelli */
+  --bg: #141930;                              /* fondo pagina: scuro ma non troppo */
+  --surface: #191f3c;                         /* sfondo delle schermate / #app */
+  --panel: #26305a;                           /* riempimento pannelli, blu più chiaro */
+  --panel-border: #4d5cae;                    /* cornice chiara esterna di pannelli e tessere */
   --panel-highlight: rgba(255, 255, 255, 0.06); /* taglio di luce sul bordo alto */
-  --band: #221b42;                            /* fascia orizzontale di intestazioni e HUD */
-  --tile-bg: #312a5e;                         /* tessera scoperta */
-  --tile-covered-bg: #191430;                 /* dorso tessera coperta: più scuro e piatto */
-  --code-bg: #241d44;                         /* pill dell'etichetta base, <code> */
+  --band: #202748;                            /* fascia orizzontale di intestazioni e HUD */
+  --tile-bg: #313c78;                         /* tessera scoperta: più chiara del fondo per staccare la griglia */
+  --tile-covered-bg: #232a52;                 /* dorso tessera coperta */
+  --tile-shadow: #20264f;                     /* "fianco" 3D della tessera scoperta */
+  --tile-covered-shadow: #11142c;             /* "fianco" 3D della tessera coperta: profondo */
+  --code-bg: #2b3566;                         /* pill dell'etichetta base, <code> */
 
-  --text: #b9b2d6;                            /* testo secondario */
-  --text-h: #f4f1ff;                          /* testo primario ad alto contrasto */
+  --text: #b9bbdd;                            /* testo secondario */
+  --text-h: #f2f3ff;                          /* testo primario ad alto contrasto */
 
-  --accent: #b07bff;
-  --base-pill-fg: #cbb0ff;                    /* etichetta base sulla tessera: accent schiarito per il contrasto */
-  --accent-strong: #8b5cf6;                   /* faccia dei pulsanti primari */
-  --accent-bg: rgba(176, 123, 255, 0.14);
-  --accent-border: rgba(176, 123, 255, 0.5);
-  --border: #3a3266;                          /* bordi neutri: #app inline, tabelle */
+  --accent: #b98cff;                          /* accento blu-violetto: freddo come il campo, distinto dai segnali di stato */
+  --base-pill-fg: #cbb8ff;                    /* etichetta base sulla tessera: accent schiarito per il contrasto */
+  --accent-strong: #5a48e0;                   /* faccia dei pulsanti primari */
+  --accent-bg: rgba(150, 130, 255, 0.16);
+  --accent-border: rgba(150, 130, 255, 0.5);
+  --border: #333c66;                          /* bordi neutri: #app inline, tabelle */
 
-  --button-shadow: #3d2a7a;                   /* ombra inferiore del pulsante primario */
-  --button-shadow-secondary: #2f2a5c;         /* ombra inferiore del pulsante secondario */
+  --button-shadow: #2b2f66;                   /* ombra inferiore del pulsante primario */
+  --button-shadow-secondary: #232a4d;         /* ombra inferiore del pulsante secondario */
 
   --badge-fg: #ffffff;                        /* glyph dentro i badge di stato colorati */
-  --state-selected: #b07bff;
+  --state-selected: #b98cff;
   --state-resolved: #35c98c;
   --state-resolved-bg: rgba(53, 201, 140, 0.16);
   --state-error: #ff6b6b;
@@ -64,6 +66,8 @@
   --band: #f4f3ec;
   --tile-bg: #fff;
   --tile-covered-bg: #f4f3ec;
+  --tile-shadow: #d9d8dc;
+  --tile-covered-shadow: #c4c2cc;
   --code-bg: #f4f3ec;
   --text: #6b6375;
   --text-h: #08060d;
@@ -516,7 +520,11 @@ code {
   border: 2px solid var(--panel-border);
   border-radius: 10px;
   background: var(--tile-bg);
-  box-shadow: inset 0 1px 0 var(--panel-highlight);
+  /* Rilievo di base: taglio di luce sul bordo alto + "fianco" sotto. Gli stati
+     lo ridefiniscono (vedi sotto). transform, non margini, per l'affondamento:
+     non altera il layout della griglia. */
+  box-shadow: inset 0 1px 0 var(--panel-highlight), 0 3px 0 var(--tile-shadow);
+  transition: transform 90ms ease, box-shadow 90ms ease;
   color: var(--text-h);
   font-family: var(--mono);
   cursor: pointer;
@@ -529,6 +537,28 @@ code {
   &:disabled {
     cursor: default;
   }
+}
+
+/* Tessera scoperta e non selezionata: cliccabile, rilievo tenue che si abbassa
+   alla pressione. L'ombra passa da 3px a 1px mentre la faccia scende di 2px:
+   il bordo inferiore resta fermo, affonda solo la faccia. */
+.tile--default:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow: inset 0 1px 0 var(--panel-highlight), 0 1px 0 var(--tile-shadow);
+}
+
+/* Tessera coperta: rilievo pieno, "da premere" come un pulsante (il rilievo a
+   riposo è in .tile--covered, più sotto). */
+.tile--covered:active:not(:disabled) {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 var(--tile-covered-shadow);
+}
+
+/* Fine partita: le tessere disabilitate perdono il rilievo, non devono
+   sembrare ancora premibili. background e opacità degli stati restano. */
+.tile:disabled {
+  transform: none;
+  box-shadow: none;
 }
 
 .tile__value {
@@ -562,30 +592,39 @@ code {
   color: var(--badge-fg);
 }
 
-/* Ogni stato porta un indizio non cromatico oltre al colore: stile del bordo
-   (dashed / solid / double) e badge con glyph. */
+/* Ogni stato porta un indizio non cromatico oltre al colore: profondità, stile
+   del bordo (dashed / solid / double) e badge con glyph.
+   Selezionata: affondata in modo stabile, come un tasto premuto. Niente "fianco"
+   sotto (nessun gradino): restano l'alone dell'accento e il bordo tratteggiato. */
 .tile--selected {
   border-color: var(--state-selected);
   border-style: dashed;
+  transform: translateY(3px);
   box-shadow: 0 0 0 3px var(--accent-bg);
 }
 
+/* Risolta: fuori gioco. Piatta, nessuna profondità. */
 .tile--resolved {
   border-style: solid;
   border-color: var(--state-resolved);
   background: var(--state-resolved-bg);
   opacity: 0.85;
+  transform: none;
+  box-shadow: none;
 
   .tile__icon {
     background: var(--state-resolved);
   }
 }
 
+/* Feedback d'errore: l'input è bloccato, non deve sembrare premibile. Piatta. */
 .tile--error {
   border-style: double;
   border-width: 4px;
   border-color: var(--state-error);
   background: var(--state-error-bg);
+  transform: none;
+  box-shadow: none;
 
   .tile__icon {
     background: var(--state-error);
@@ -593,12 +632,12 @@ code {
 }
 
 /* Dorso uniforme: stessa resa per ogni tessera coperta, indipendentemente da
-   valore o base, e distinguibile a colpo d'occhio dalle tessere scoperte —
-   più scura, piatta (niente taglio di luce), con un solo "?" grande. */
+   valore o base. Distinguibile a colpo d'occhio dalle scoperte: tono più scuro,
+   rilievo più marcato (5px contro 3px) e un solo "?" grande. */
 .tile--covered {
   background: var(--tile-covered-bg);
   border-style: solid;
-  box-shadow: none;
+  box-shadow: 0 5px 0 var(--tile-covered-shadow);
 }
 
 .tile__cover-icon {
