@@ -1,10 +1,14 @@
 import { GAME_STATUS, getTotalElapsedSeconds } from '../core/gameEngine.js';
 import { formatTime } from './hud.js';
+import { createIcon } from './icons.js';
 import { MAX_PLAYER_NAME_LENGTH } from '../config.js';
 
-function buildStat(label, value) {
+function buildStat(iconName, label, value) {
   const wrapper = document.createElement('div');
   wrapper.className = 'summary-screen__stat';
+
+  const text = document.createElement('span');
+  text.className = 'summary-screen__stat-text';
 
   const dt = document.createElement('dt');
   dt.textContent = label;
@@ -12,7 +16,8 @@ function buildStat(label, value) {
   const dd = document.createElement('dd');
   dd.textContent = value;
 
-  wrapper.append(dt, dd);
+  text.append(dt, dd);
+  wrapper.append(createIcon(iconName), text);
   return wrapper;
 }
 
@@ -71,11 +76,11 @@ export function renderSummaryScreen(container, { state, level, qualifies, onSave
   const stats = document.createElement('dl');
   stats.className = 'summary-screen__stats';
   stats.append(
-    buildStat('Punteggio finale', String(state.score)),
-    buildStat('Livello raggiunto', level.name),
-    buildStat('Tempo impiegato', formatTime(getTotalElapsedSeconds(state, Date.now()))),
-    buildStat('Coppie risolte', `${state.resolvedPairIds.length}/${totalPairCount}`),
-    buildStat('Errori', String(state.errorCount))
+    buildStat('score', 'Punteggio finale', String(state.score)),
+    buildStat('level', 'Livello raggiunto', level.name),
+    buildStat('time', 'Tempo impiegato', formatTime(getTotalElapsedSeconds(state, Date.now()))),
+    buildStat('pairs', 'Coppie risolte', `${state.resolvedPairIds.length}/${totalPairCount}`),
+    buildStat('errors', 'Errori', String(state.errorCount))
   );
   section.appendChild(stats);
 
