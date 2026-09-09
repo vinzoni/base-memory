@@ -5,15 +5,13 @@
 // preferenza attivo/disattivato (persistita).
 
 // Volume generale, tenuto basso di proposito: il gioco si usa in aule con molte
-// postazioni vicine. È più basso della somma di picco di un accordo con la
-// seconda voce e la coda del riverbero; il compressore a valle raccoglie i
-// transienti residui.
+// postazioni vicine. Il compressore a valle raccoglie i transienti residui
+// quando le voci di un accordo si sommano.
 const MASTER_GAIN = 0.09;
 
 // Inviluppo comune a ogni nota. Attacco lineare breve ma non istantaneo (un
 // fronte netto a volume pieno è udibile come schiocco). Rilascio esponenziale
-// lungo via setTargetAtTime: la nota sfuma invece di essere troncata di netto —
-// è la causa principale della durezza percepita quando la coda è cortissima.
+// via setTargetAtTime: la nota sfuma invece di essere troncata di netto.
 const ATTACK_SECONDS = 0.018;
 const RELEASE_TIME_CONSTANT = 0.11; // la coda udibile dura circa 4-5 volte tanto
 const TAIL_SECONDS = 0.5; // margine oltre la coda udibile prima di fermare l'oscillatore
@@ -30,60 +28,81 @@ const REVERB_LOWPASS_HZ = 3500;
 const IMPULSE_SECONDS = 1.1;
 const IMPULSE_DECAY = 3.2;
 
-// Ogni evento è un piccolo accordo: note con attacchi ravvicinati e durate che
-// si accavallano, così suonano insieme invece che in fila. `frequency` in Hz;
-// `startAt` e `duration` (sostegno prima del rilascio) in secondi; `gain`
-// opzionale (0-1) abbassa la singola nota; `releaseScale` opzionale accorcia la
-// coda di quella nota. Il carattere resta ascendente per gli eventi positivi e
-// discendente per quelli negativi. Nessun suono supera circa un secondo, coda
-// del riverbero inclusa, tranne `gameWon` (fanfara di partita vinta).
+// Silenzio tra il click che chiude il livello e il suono del traguardo: fa da
+// respiro, così il traguardo suona come evento deliberato e non si sovrappone
+// alla chiusura dell'ultima coppia (il cui riscontro sonoro `main.js` sopprime
+// proprio sulla transizione a livello completato). Applicato a levelComplete,
+// gameWon e gameLost; schedulato sul clock audio, senza timer JS in sospeso.
+const MILESTONE_LEAD_SECONDS = 0.28;
+const LEAD_SOUNDS = new Set(['levelComplete', 'gameWon', 'gameLost']);
+
+// Dissolvenza con cui un suono nuovo interrompe un traguardo ancora in coda,
+// così non resta appeso quando il giocatore è già passato alla schermata dopo.
+const MILESTONE_CANCEL_FADE_SECONDS = 0.04;
+
+// Ogni evento è una sequenza di note: `frequency` in Hz; `startAt` e `duration`
+// (sostegno prima del rilascio) in secondi; `gain` opzionale (0-1) abbassa la
+// singola nota; `releaseScale` opzionale accorcia la coda di quella nota.
 const SOUND_SEQUENCES = {
-  // Triade maggiore Do-Mi-Sol con attacchi in salita: le tre note restano a
-  // suonare insieme in un accordo pieno e consonante (terza + quinta).
+  // Due note ascendenti rapide, tipo campanella: riscontro leggero e brillante
+  // per un evento che ricorre otto o più volte per livello. Volume contenuto,
+  // niente accordo — quelli sono riservati ai traguardi. Prende la misura da
+  // `pairError`, l'unico suono che al collaudo non risultava fastidioso.
   pairMatch: [
-    { frequency: 523.25, type: 'triangle', startAt: 0, duration: 0.36 },
-    { frequency: 659.25, type: 'triangle', startAt: 0.05, duration: 0.34 },
-    { frequency: 783.99, type: 'triangle', startAt: 0.1, duration: 0.38 },
+    { frequency: 659.25, type: 'triangle', startAt: 0, duration: 0.06, gain: 0.5, releaseScale: 0.6 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.07, duration: 0.12, gain: 0.5, releaseScale: 0.6 },
   ],
-  // Terza discendente Si2->Sol2, sinusoide morbida a volume ridotto e coda
-  // accorciata: è il suono che si sente più spesso mentre si impara, deve
-  // restare il più contenuto e non diventare fastidioso alla quinta volta.
+  // Due note discendenti ravvicinate, sinusoide morbida a volume ridotto: il
+  // suono che si sente più spesso mentre si impara, non deve diventare
+  // fastidioso alla quinta volta. È il riferimento di misura per gli altri.
   pairError: [
     { frequency: 246.94, type: 'sine', startAt: 0, duration: 0.14, gain: 0.5, releaseScale: 0.5 },
     { frequency: 196.0, type: 'sine', startAt: 0.06, duration: 0.18, gain: 0.5, releaseScale: 0.5 },
   ],
-  // Arpeggio ascendente Do-Mi-Sol-Do che si chiude restando a suonare come
-  // accordo.
-  levelComplete: [
-    { frequency: 523.25, type: 'triangle', startAt: 0, duration: 0.26 },
-    { frequency: 659.25, type: 'triangle', startAt: 0.08, duration: 0.3 },
-    { frequency: 783.99, type: 'triangle', startAt: 0.16, duration: 0.34 },
-    { frequency: 1046.5, type: 'triangle', startAt: 0.24, duration: 0.4 },
-  ],
-  // Due rintocchi di quinta (Sol + Do) sovrapposti: riconoscibile come allerta,
-  // ma senza intervalli aspri. `main.js` lo emette una volta sola, al passaggio
-  // sotto la soglia di avviso.
+  // Allarme a tre toni ripetuto: tre impulsi uguali, breve pausa, altri tre. La
+  // ripetizione e il ritmo comunicano urgenza; volume medio e onda pulita
+  // evitano che spaventi. `main.js` lo emette una volta sola, al passaggio sotto
+  // la soglia di avviso.
   timeLow: [
-    { frequency: 783.99, type: 'triangle', startAt: 0, duration: 0.13, gain: 0.7 },
-    { frequency: 1046.5, type: 'triangle', startAt: 0, duration: 0.13, gain: 0.45 },
-    { frequency: 783.99, type: 'triangle', startAt: 0.2, duration: 0.15, gain: 0.7 },
-    { frequency: 1046.5, type: 'triangle', startAt: 0.2, duration: 0.15, gain: 0.45 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.0, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.15, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.3, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.58, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.73, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.88, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
   ],
-  // Fanfara ascendente Do-Mi-Sol-Do che si risolve su una triade tenuta.
+  // Traguardo di livello: linea ascendente Sol-Do-Mi che si apre su una diade
+  // Do-Mi tenuta, senza risolvere del tutto — è un passaggio, non una
+  // conclusione. Più corto e più esile di `gameWon`.
+  levelComplete: [
+    { frequency: 392.0, type: 'triangle', startAt: 0.0, duration: 0.13 },
+    { frequency: 523.25, type: 'triangle', startAt: 0.1, duration: 0.15 },
+    { frequency: 659.25, type: 'triangle', startAt: 0.2, duration: 0.6 },
+    { frequency: 783.99, type: 'triangle', startAt: 0.2, duration: 0.6, gain: 0.5 },
+  ],
+  // Vittoria finale: arpeggio pieno Do-Mi-Sol-Do che si risolve su una triade
+  // maggiore tenuta con la voce acuta in evidenza. Più lungo, più denso e
+  // chiaramente risolto rispetto a `levelComplete`: qui il gioco finisce.
   gameWon: [
-    { frequency: 523.25, type: 'triangle', startAt: 0, duration: 0.16 },
-    { frequency: 659.25, type: 'triangle', startAt: 0.12, duration: 0.16 },
-    { frequency: 783.99, type: 'triangle', startAt: 0.24, duration: 0.16 },
-    { frequency: 1046.5, type: 'triangle', startAt: 0.36, duration: 0.5 },
-    { frequency: 659.25, type: 'triangle', startAt: 0.36, duration: 0.5, gain: 0.55 },
-    { frequency: 523.25, type: 'triangle', startAt: 0.36, duration: 0.5, gain: 0.45 },
+    { frequency: 523.25, type: 'triangle', startAt: 0.0, duration: 0.14 },
+    { frequency: 659.25, type: 'triangle', startAt: 0.13, duration: 0.14 },
+    { frequency: 783.99, type: 'triangle', startAt: 0.26, duration: 0.14 },
+    { frequency: 1046.5, type: 'triangle', startAt: 0.39, duration: 0.9 },
+    { frequency: 783.99, type: 'triangle', startAt: 0.39, duration: 0.9, gain: 0.5 },
+    { frequency: 659.25, type: 'triangle', startAt: 0.39, duration: 0.9, gain: 0.45 },
+    { frequency: 523.25, type: 'triangle', startAt: 0.39, duration: 0.9, gain: 0.4 },
   ],
-  // Tre note discendenti La-Fa-Do sovrapposte, sinusoide: risoluzione morbida,
-  // carattere calante senza dissonanze.
+  // Sconfitta: stessa lunghezza di `gameWon` ma specchiata — arpeggio
+  // discendente Do-La-Fa-Re che sprofonda su una triade minore tenuta.
+  // Sinusoide, volume contenuto: negativo e inequivocabile dalla prima nota,
+  // senza essere punitivo.
   gameLost: [
-    { frequency: 440.0, type: 'sine', startAt: 0, duration: 0.24, gain: 0.7 },
-    { frequency: 349.23, type: 'sine', startAt: 0.1, duration: 0.28, gain: 0.7 },
-    { frequency: 261.63, type: 'sine', startAt: 0.2, duration: 0.4, gain: 0.7 },
+    { frequency: 523.25, type: 'sine', startAt: 0.0, duration: 0.16, gain: 0.7 },
+    { frequency: 440.0, type: 'sine', startAt: 0.15, duration: 0.16, gain: 0.7 },
+    { frequency: 349.23, type: 'sine', startAt: 0.3, duration: 0.16, gain: 0.7 },
+    { frequency: 293.66, type: 'sine', startAt: 0.45, duration: 0.85, gain: 0.7 },
+    { frequency: 349.23, type: 'sine', startAt: 0.45, duration: 0.85, gain: 0.5 },
+    { frequency: 440.0, type: 'sine', startAt: 0.45, duration: 0.85, gain: 0.45 },
   ],
 };
 
@@ -116,6 +135,9 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
   let compressor = null;
   let convolver = null; // opzionale: se il riverbero non si crea, resta null
   let enabled = false;
+  // Voci di un suono-traguardo ancora schedulate o in corso: le interrompe la
+  // prossima chiamata a play().
+  let pendingMilestoneVoices = [];
 
   // L'AudioContext va creato alla prima interazione dell'utente, non al
   // caricamento della pagina: i browser bloccano l'audio prima di un gesto
@@ -190,13 +212,14 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
     }
     oscillator.start(startTime);
     oscillator.stop(stopTime);
+    return oscillator;
   }
 
   function scheduleNote(note, noteStartTime) {
     const peak = note.gain ?? 1;
     const releaseScale = note.releaseScale ?? 1;
     const releaseStart = noteStartTime + note.duration;
-    const stopTime = releaseStart + TAIL_SECONDS * releaseScale;
+    const endTime = releaseStart + TAIL_SECONDS * releaseScale;
 
     const envelope = context.createGain();
     envelope.gain.setValueAtTime(0.0001, noteStartTime);
@@ -208,8 +231,32 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
     envelope.connect(masterGain);
     if (convolver) envelope.connect(convolver);
 
-    scheduleVoice(note.type, note.frequency, envelope, noteStartTime, stopTime, 1);
-    scheduleVoice(note.type, note.frequency * 2, envelope, noteStartTime, stopTime, OCTAVE_MIX);
+    const oscillators = [
+      scheduleVoice(note.type, note.frequency, envelope, noteStartTime, endTime, 1),
+      scheduleVoice(note.type, note.frequency * 2, envelope, noteStartTime, endTime, OCTAVE_MIX),
+    ];
+    return { envelope, oscillators, endTime };
+  }
+
+  // Interrompe con una breve dissolvenza le voci di un traguardo ancora in coda.
+  // Chiamata a ogni play(): quando la partita riprende, il primo suono nuovo
+  // taglia il traguardo residuo invece di lasciarlo suonare sulla schermata dopo.
+  function stopPendingMilestone() {
+    if (pendingMilestoneVoices.length === 0) return;
+    const now = context.currentTime;
+    for (const voice of pendingMilestoneVoices) {
+      if (voice.endTime <= now) continue;
+      try {
+        voice.envelope.gain.cancelScheduledValues(now);
+        voice.envelope.gain.setTargetAtTime(0, now, MILESTONE_CANCEL_FADE_SECONDS);
+        for (const oscillator of voice.oscillators) {
+          oscillator.stop(now + MILESTONE_CANCEL_FADE_SECONDS * 4);
+        }
+      } catch {
+        // Voce già terminata: niente da fermare.
+      }
+    }
+    pendingMilestoneVoices = [];
   }
 
   function play(soundName) {
@@ -218,10 +265,15 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
     if (!sequence) return;
     try {
       if (context.state === 'suspended') context.resume();
-      const startTime = context.currentTime;
+      stopPendingMilestone();
+
+      const isMilestone = LEAD_SOUNDS.has(soundName);
+      const startTime = context.currentTime + (isMilestone ? MILESTONE_LEAD_SECONDS : 0);
+      const voices = [];
       for (const note of sequence) {
-        scheduleNote(note, startTime + note.startAt);
+        voices.push(scheduleNote(note, startTime + note.startAt));
       }
+      if (isMilestone) pendingMilestoneVoices = voices;
     } catch {
       // Una singola riproduzione fallita non deve propagare errori al gioco.
     }
