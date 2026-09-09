@@ -314,7 +314,16 @@ Requisiti minimi di qualità:
 - avviso in configurazione se DEC non è selezionato e il vincolo pivot decimale è
   quindi ignorato (si veda §4);
 - avviso alla transizione tra livelli quando il vincolo pivot decimale decade
-  (si veda §4).
+  (si veda §4);
+- effetti sonori sintetici (Web Audio, nessun file audio) per: coppia corretta,
+  errore, livello completato, tempo sceso sotto i 30 secondi (emesso una sola
+  volta), fine partita con vittoria e sconfitta distinte. Suoni brevi, di tipo
+  arcade; quello dell'errore è riconoscibile come negativo senza essere
+  punitivo;
+- interruttore per silenziare l'audio, raggiungibile sia dalla configurazione
+  sia durante la partita. La preferenza è persistente ed è ricordata per
+  macchina; l'audio parte **disattivato**, perché in aula molte postazioni
+  vicine che suonano insieme diventano rumore.
 
 > **Limite noto:** `:root` dichiara `font: 18px/145%`, e una
 > `line-height` percentuale viene risolta in pixel ed ereditata come valore
@@ -337,5 +346,5 @@ Requisiti minimi di qualità:
 ## 8. Fuori perimetro
 
 - Backend, account, classifica online.
-- Audio, animazioni elaborate, temi grafici multipli.
+- Animazioni elaborate, temi grafici multipli.
 - Internazionalizzazione: la UI è in italiano.

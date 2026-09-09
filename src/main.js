@@ -6,13 +6,16 @@ import {
   checkTimeout,
   createGame,
   finishGame,
+  getRemainingSeconds,
   getTotalElapsedSeconds,
   selectTile,
 } from './core/gameEngine.js';
 import { LEVELS, getLevelById } from './core/levels.js';
-import { MIN_BASES_FOR_OPERATIVE_PIVOT, UI_TIMING } from './config.js';
+import { AUDIO_ENABLED_BY_DEFAULT, MIN_BASES_FOR_OPERATIVE_PIVOT, STORAGE_KEYS, UI_TIMING } from './config.js';
 import { renderBoard } from './ui/board.js';
 import { renderHud } from './ui/hud.js';
+import { createSoundPlayer } from './ui/sounds.js';
+import { createAudioToggle } from './ui/audioToggle.js';
 import { renderConfigScreen } from './ui/configScreen.js';
 import { renderSummaryScreen } from './ui/summaryScreen.js';
 import { renderLevelCompleteScreen } from './ui/levelCompleteScreen.js';
@@ -56,9 +59,64 @@ function resetHighScores() {
   clearHighScores(storage);
 }
 
+// La preferenza audio segue lo stesso principio della classifica: solo main.js
+// tocca localStorage, i moduli di UI ricevono già funzioni pronte. La logica è
+// minima (un booleano) e vive qui invece che in un modulo di storage dedicato.
+function readAudioEnabled() {
+  let raw;
+  try {
+    raw = storage.getItem(STORAGE_KEYS.AUDIO_ENABLED);
+  } catch {
+    return AUDIO_ENABLED_BY_DEFAULT;
+  }
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  // Valore assente o malformato: si torna al default (audio spento), scelta
+  // sicura per l'uso in aula.
+  return AUDIO_ENABLED_BY_DEFAULT;
+}
+function writeAudioEnabled(isEnabled) {
+  try {
+    storage.setItem(STORAGE_KEYS.AUDIO_ENABLED, String(isEnabled));
+  } catch {
+    // Storage non disponibile o quota esaurita: la preferenza non viene
+    // persistita ma la sessione corrente resta valida.
+  }
+}
+
+const sounds = createSoundPlayer();
+let audioEnabled = readAudioEnabled();
+sounds.setEnabled(audioEnabled);
+
+// L'AudioContext deve nascere da un gesto dell'utente (i browser bloccano
+// l'audio prima di un'interazione). Il primo pointerdown/keydown utile lo
+// sblocca — di fatto già il click su "Inizia".
+function unlockAudio() {
+  sounds.unlock();
+}
+document.addEventListener('pointerdown', unlockAudio, { once: true });
+document.addEventListener('keydown', unlockAudio, { once: true });
+
+// Unico proprietario dello stato audio: espone la lettura e il cambio, e tiene
+// insieme motore sonoro e persistenza. Il pulsante toggle (configurazione e
+// partita) lavora solo attraverso questo oggetto.
+const audioControl = {
+  isEnabled: () => audioEnabled,
+  toggle: () => {
+    audioEnabled = !audioEnabled;
+    sounds.setEnabled(audioEnabled);
+    writeAudioEnabled(audioEnabled);
+    // Accendere l'audio è a sua volta un gesto valido per creare l'AudioContext,
+    // se non è ancora stato sbloccato.
+    sounds.unlock();
+    return audioEnabled;
+  },
+};
+
 function renderGameScreen(container, { selectedBases, level, previousState, onLevelComplete, onGameOver }) {
   container.innerHTML = `
     <main class="game-screen">
+      <div class="game-screen__toolbar"></div>
       <section id="hud" class="hud"></section>
       <section id="board" class="board"></section>
     </main>
@@ -66,9 +124,26 @@ function renderGameScreen(container, { selectedBases, level, previousState, onLe
   const hudEl = container.querySelector('#hud');
   const boardEl = container.querySelector('#board');
 
+  // Il toggle audio si costruisce una volta sola, fuori dal ciclo di renderHud:
+  // renderHud fa replaceChildren su #hud a ogni tick del timer e distruggerebbe
+  // il pulsante (e il focus da tastiera su di esso).
+  container.querySelector('.game-screen__toolbar').appendChild(createAudioToggle(audioControl));
+
   let state = previousState
     ? advanceToNextLevel(previousState, { level, selectedBases, startedAt: Date.now() })
     : createGame({ level, selectedBases, startedAt: Date.now() });
+
+  // Il suono di fine partita (vittoria o sconfitta) va emesso una volta sola:
+  // la fine può essere rilevata sia da handleTileClick sia dal tick del timer.
+  let endSoundPlayed = false;
+  function playEndSound(soundName) {
+    if (endSoundPlayed) return;
+    endSoundPlayed = true;
+    sounds.play(soundName);
+  }
+  // Il suono "tempo agli sgoccioli" si emette una volta sola, al passaggio sotto
+  // la soglia di avviso, non a ogni tick.
+  let timeLowPlayed = false;
 
   function renderHudNow() {
     renderHud(hudEl, state, Date.now());
@@ -81,6 +156,10 @@ function renderGameScreen(container, { selectedBases, level, previousState, onLe
   function handleTileClick(tileId) {
     const next = selectTile(state, tileId, Date.now());
     if (next === state) return; // no-op difensivo dell'engine: niente da ridisegnare
+
+    const justResolvedPair = next.resolvedPairIds.length > state.resolvedPairIds.length;
+    const justErrored = next.pendingMismatch && !state.pendingMismatch;
+
     state = next;
     renderFullBoard();
     renderHudNow();
@@ -88,16 +167,26 @@ function renderGameScreen(container, { selectedBases, level, previousState, onLe
     if (state.status === GAME_STATUS.LEVEL_COMPLETE) {
       const nextLevel = getLevelById(state.levelId + 1);
       if (nextLevel) {
+        sounds.play('levelComplete');
         onLevelComplete(state, nextLevel);
       } else {
+        playEndSound('gameWon');
         onGameOver(finishGame(state));
       }
       return;
     }
 
     if (state.status !== GAME_STATUS.PLAYING) {
+      // selectTile può chiudere la partita per timeout scoperto proprio al click.
+      playEndSound('gameLost');
       onGameOver(state);
       return;
+    }
+
+    if (justErrored) {
+      sounds.play('pairError');
+    } else if (justResolvedPair) {
+      sounds.play('pairMatch');
     }
 
     if (state.pendingMismatch) {
@@ -122,8 +211,20 @@ function renderGameScreen(container, { selectedBases, level, previousState, onLe
       }
     }
     renderHudNow();
+
+    if (state.status === GAME_STATUS.PLAYING && !timeLowPlayed) {
+      const remaining = getRemainingSeconds(state, Date.now());
+      // remaining > 0: a zero è già scattato il timeout, il suono giusto è
+      // gameLost, non l'avviso.
+      if (remaining > 0 && remaining < UI_TIMING.TIME_WARNING_THRESHOLD_SECONDS) {
+        timeLowPlayed = true;
+        sounds.play('timeLow');
+      }
+    }
+
     if (state.status !== GAME_STATUS.PLAYING) {
       clearInterval(timerId);
+      if (state.status === GAME_STATUS.LOST) playEndSound('gameLost');
       onGameOver(state);
     }
   }, UI_TIMING.TIMER_TICK_INTERVAL_MS);
@@ -224,6 +325,7 @@ function showConfigScreen() {
       hasDecimalPivotLevel: HAS_DECIMAL_PIVOT_LEVEL,
       onStart: showGameScreen,
       onShowHighScores: showHighScoresScreen,
+      audioControl,
     })
   );
 }

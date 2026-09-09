@@ -27,6 +27,10 @@ const ICON_PATHS = {
   pairs: ['M4 8a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8Z', 'M10 4h8a2 2 0 0 1 2 2v10'],
   // Cerchio con una croce: l'errore.
   errors: ['M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18Z', 'M9 9l6 6M15 9l-6 6'],
+  // Altoparlante con due onde sonore: audio attivo.
+  soundOn: ['M4 9v6h3.5L13 19V5L7.5 9H4Z', 'M16.5 8.5a5 5 0 0 1 0 7', 'M19 6a8.5 8.5 0 0 1 0 12'],
+  // Altoparlante con una croce: audio disattivato.
+  soundOff: ['M4 9v6h3.5L13 19V5L7.5 9H4Z', 'M17 9.5l5 5M22 9.5l-5 5'],
 };
 
 export function createIcon(name) {

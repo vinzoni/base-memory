@@ -19,7 +19,13 @@ export const MAX_BOARD_ASPECT_RATIO = 2;
 
 export const STORAGE_KEYS = {
   HIGH_SCORES: 'baseMemory.highScores',
+  AUDIO_ENABLED: 'baseMemory.audioEnabled',
 };
+
+// L'audio parte disattivato: in aula molte postazioni vicine che suonano insieme
+// diventano rumore. È una scelta per macchina, ricordata tra le sessioni; il
+// toggle in configurazione ne garantisce la scoperta.
+export const AUDIO_ENABLED_BY_DEFAULT = false;
 
 export const MAX_HIGH_SCORES = 10;
 export const MAX_PLAYER_NAME_LENGTH = 20;

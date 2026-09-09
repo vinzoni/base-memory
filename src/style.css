@@ -427,6 +427,34 @@ code {
   flex-grow: 1;
 }
 
+/* Barra sopra l'HUD: per ora contiene solo il toggle audio, allineato a destra
+   e largo quanto HUD e board. */
+.game-screen__toolbar {
+  width: 100%;
+  max-width: 640px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Interruttore audio: usa .screen-secondary-button come base ma più compatto,
+   è un controllo di servizio, non un'azione primaria. */
+.audio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.audio-toggle__icon {
+  display: flex;
+}
+
+.audio-toggle[aria-pressed='true'] {
+  color: var(--accent);
+}
+
 /* Icone SVG (HUD, righe di statistiche). Il tratto è currentColor: seguono il
    colore del testo del contesto. La misura è qui, non sugli attributi del tag. */
 .icon {

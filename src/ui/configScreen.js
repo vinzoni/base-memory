@@ -1,6 +1,7 @@
 import { BASES } from '../core/bases.js';
 import { getGridPairCap, getPlayablePairCount } from '../core/pairGenerator.js';
 import { DEFAULT_SELECTED_BASES, MIN_SELECTABLE_BASES } from '../config.js';
+import { createAudioToggle } from './audioToggle.js';
 
 const BASE_ORDER = Object.keys(BASES);
 
@@ -41,7 +42,10 @@ function buildStatusText(status) {
   return `${status.message} Con queste basi alcuni numeri si scrivono allo stesso modo e non formano coppie valide.`;
 }
 
-export function renderConfigScreen(container, { level, hasDecimalPivotLevel, onStart, onShowHighScores }) {
+export function renderConfigScreen(
+  container,
+  { level, hasDecimalPivotLevel, onStart, onShowHighScores, audioControl }
+) {
   const selectedBases = new Set(DEFAULT_SELECTED_BASES);
 
   const section = document.createElement('section');
@@ -109,6 +113,8 @@ export function renderConfigScreen(container, { level, hasDecimalPivotLevel, onS
   highScoresButton.textContent = 'Classifica';
   highScoresButton.addEventListener('click', () => onShowHighScores());
   section.appendChild(highScoresButton);
+
+  section.appendChild(createAudioToggle(audioControl));
 
   function update() {
     const currentStatus = computeStatus(selectedBases, level);
