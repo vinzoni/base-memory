@@ -9,16 +9,28 @@
 // quando le voci di un accordo si sommano.
 const MASTER_GAIN = 0.09;
 
-// Inviluppo comune a ogni nota. Attacco lineare breve ma non istantaneo (un
-// fronte netto a volume pieno è udibile come schiocco). Rilascio esponenziale
-// via setTargetAtTime: la nota sfuma invece di essere troncata di netto.
+// Inviluppo "sustained": per i suoni morbidi (pairError, timeLow, gameWon,
+// gameLost). Attacco lineare breve ma non istantaneo (un fronte netto a volume
+// pieno è udibile come schiocco), sostegno, poi rilascio esponenziale via
+// setTargetAtTime: la nota sfuma invece di essere troncata di netto.
 const ATTACK_SECONDS = 0.018;
 const RELEASE_TIME_CONSTANT = 0.11; // la coda udibile dura circa 4-5 volte tanto
 const TAIL_SECONDS = 0.5; // margine oltre la coda udibile prima di fermare l'oscillatore
 
+// Inviluppo "struck": per i suoni che devono essere squillanti (pairMatch,
+// levelComplete). Attacco quasi istantaneo e nessun sostegno — la nota decade
+// subito, come una campana percossa o una corda pizzicata. Un attacco di 18 ms
+// e un rilascio lungo toglierebbero brillantezza. Va tenuto separato da quello
+// comune, non uniformato.
+const STRUCK_ATTACK_SECONDS = 0.002; // micro-rampa: quasi istantanea, ma senza schiocco
+const STRUCK_TAIL_FACTOR = 5; // costanti di tempo di decadimento prima di fermare l'oscillatore
+
 // Seconda voce sovrapposta a ogni nota, un'ottava sopra e a volume ridotto: dà
-// spessore al timbro senza cambiare la nota percepita.
+// spessore al timbro senza cambiare la nota percepita. Per i suoni "struck" è
+// più tenue e sempre `triangle`: rinforzo armonico dolce sopra un fondamentale
+// brillante, senza stridere.
 const OCTAVE_MIX = 0.28;
+const STRUCK_OCTAVE_MIX = 0.16;
 
 // Riverbero: convolutore con impulso sintetico. Discreto (mix basso, coda
 // filtrata in alto per un ambiente caldo), così i suoni sembrano in uno spazio
@@ -40,17 +52,22 @@ const LEAD_SOUNDS = new Set(['levelComplete', 'gameWon', 'gameLost']);
 // così non resta appeso quando il giocatore è già passato alla schermata dopo.
 const MILESTONE_CANCEL_FADE_SECONDS = 0.04;
 
-// Ogni evento è una sequenza di note: `frequency` in Hz; `startAt` e `duration`
-// (sostegno prima del rilascio) in secondi; `gain` opzionale (0-1) abbassa la
-// singola nota; `releaseScale` opzionale accorcia la coda di quella nota.
+// Suoni con inviluppo "struck" (attacco istantaneo, decadimento naturale).
+// Indipendente da LEAD_SOUNDS: levelComplete è in entrambi, pairMatch solo qui.
+// Un nome che non compare in nessun set usa l'inviluppo "sustained".
+const STRUCK_SOUNDS = new Set(['pairMatch', 'levelComplete']);
+
+// Ogni evento è una sequenza di note. `frequency` in Hz; `startAt` in secondi;
+// `gain` opzionale (0-1) abbassa la singola nota. Per i suoni "sustained":
+// `duration` è il sostegno prima del rilascio, `releaseScale` accorcia la coda.
+// Per i suoni "struck": `decay` è la costante di tempo del decadimento.
 const SOUND_SEQUENCES = {
-  // Due note ascendenti rapide, tipo campanella: riscontro leggero e brillante
-  // per un evento che ricorre otto o più volte per livello. Volume contenuto,
-  // niente accordo — quelli sono riservati ai traguardi. Prende la misura da
-  // `pairError`, l'unico suono che al collaudo non risultava fastidioso.
+  // Campanello squillante: din-don, attacco istantaneo e coda che decade. Onda
+  // `square` (più ricca di armoniche di `triangle`, carattere arcade) sul
+  // fondamentale. Due note nitide, la seconda più acuta (Mi5 -> Si5, quinta).
   pairMatch: [
-    { frequency: 659.25, type: 'triangle', startAt: 0, duration: 0.06, gain: 0.5, releaseScale: 0.6 },
-    { frequency: 880.0, type: 'triangle', startAt: 0.07, duration: 0.12, gain: 0.5, releaseScale: 0.6 },
+    { frequency: 659.25, type: 'square', startAt: 0, decay: 0.11, gain: 0.42 },
+    { frequency: 987.77, type: 'square', startAt: 0.12, decay: 0.17, gain: 0.42 },
   ],
   // Due note discendenti ravvicinate, sinusoide morbida a volume ridotto: il
   // suono che si sente più spesso mentre si impara, non deve diventare
@@ -59,26 +76,34 @@ const SOUND_SEQUENCES = {
     { frequency: 246.94, type: 'sine', startAt: 0, duration: 0.14, gain: 0.5, releaseScale: 0.5 },
     { frequency: 196.0, type: 'sine', startAt: 0.06, duration: 0.18, gain: 0.5, releaseScale: 0.5 },
   ],
-  // Allarme a tre toni ripetuto: tre impulsi uguali, breve pausa, altri tre. La
-  // ripetizione e il ritmo comunicano urgenza; volume medio e onda pulita
+  // Allarme a tre tempi: tre impulsi uguali, pausa, altri tre, pausa, altri tre.
+  // La ripetizione e il ritmo comunicano urgenza; volume medio e onda pulita
   // evitano che spaventi. `main.js` lo emette una volta sola, al passaggio sotto
   // la soglia di avviso.
   timeLow: [
     { frequency: 880.0, type: 'triangle', startAt: 0.0, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
     { frequency: 880.0, type: 'triangle', startAt: 0.15, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
     { frequency: 880.0, type: 'triangle', startAt: 0.3, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
-    { frequency: 880.0, type: 'triangle', startAt: 0.58, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
-    { frequency: 880.0, type: 'triangle', startAt: 0.73, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.44, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.59, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 0.74, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
     { frequency: 880.0, type: 'triangle', startAt: 0.88, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 1.03, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
+    { frequency: 880.0, type: 'triangle', startAt: 1.18, duration: 0.09, gain: 0.5, releaseScale: 0.3 },
   ],
-  // Traguardo di livello: linea ascendente Sol-Do-Mi che si apre su una diade
-  // Do-Mi tenuta, senza risolvere del tutto — è un passaggio, non una
-  // conclusione. Più corto e più esile di `gameWon`.
+  // Traguardo di livello: corsa ascendente Sol-Do-Mi-Sol in note staccate
+  // (inviluppo "struck") e un colpo finale marcato su un accordo Do maggiore.
+  // Accento ritmico, non legato: comunica lo slancio del passaggio allo step
+  // successivo. Distinto da `gameWon`, che è legato e risolto.
   levelComplete: [
-    { frequency: 392.0, type: 'triangle', startAt: 0.0, duration: 0.13 },
-    { frequency: 523.25, type: 'triangle', startAt: 0.1, duration: 0.15 },
-    { frequency: 659.25, type: 'triangle', startAt: 0.2, duration: 0.6 },
-    { frequency: 783.99, type: 'triangle', startAt: 0.2, duration: 0.6, gain: 0.5 },
+    { frequency: 392.0, type: 'square', startAt: 0.0, decay: 0.05, gain: 0.5 },
+    { frequency: 523.25, type: 'square', startAt: 0.12, decay: 0.05, gain: 0.5 },
+    { frequency: 659.25, type: 'square', startAt: 0.24, decay: 0.05, gain: 0.5 },
+    { frequency: 783.99, type: 'square', startAt: 0.36, decay: 0.05, gain: 0.55 },
+    { frequency: 523.25, type: 'square', startAt: 0.52, decay: 0.22, gain: 0.9 },
+    { frequency: 659.25, type: 'square', startAt: 0.52, decay: 0.22, gain: 0.7 },
+    { frequency: 783.99, type: 'square', startAt: 0.52, decay: 0.22, gain: 0.6 },
+    { frequency: 1046.5, type: 'square', startAt: 0.52, decay: 0.22, gain: 0.55 },
   ],
   // Vittoria finale: arpeggio pieno Do-Mi-Sol-Do che si risolve su una triade
   // maggiore tenuta con la voce acuta in evidenza. Più lungo, più denso e
@@ -120,6 +145,32 @@ function createImpulseResponse(context) {
     }
   }
   return impulse;
+}
+
+// Inviluppo morbido: attacco -> sostegno fino a `startTime + duration` ->
+// rilascio esponenziale. Restituisce il momento oltre il quale l'oscillatore
+// può essere fermato senza tagliare la coda.
+function applySustainedEnvelope(gainParam, startTime, note) {
+  const peak = note.gain ?? 1;
+  const releaseScale = note.releaseScale ?? 1;
+  const releaseStart = startTime + note.duration;
+  gainParam.setValueAtTime(0.0001, startTime);
+  gainParam.linearRampToValueAtTime(peak, startTime + ATTACK_SECONDS);
+  gainParam.setValueAtTime(peak, releaseStart);
+  gainParam.setTargetAtTime(0, releaseStart, RELEASE_TIME_CONSTANT * releaseScale);
+  return releaseStart + TAIL_SECONDS * releaseScale;
+}
+
+// Inviluppo percussivo: attacco quasi istantaneo, nessun sostegno, decadimento
+// esponenziale con costante di tempo `note.decay`.
+function applyStruckEnvelope(gainParam, startTime, note) {
+  const peak = note.gain ?? 1;
+  const decay = note.decay ?? 0.12;
+  const attackEnd = startTime + STRUCK_ATTACK_SECONDS;
+  gainParam.setValueAtTime(0.0001, startTime);
+  gainParam.linearRampToValueAtTime(peak, attackEnd);
+  gainParam.setTargetAtTime(0, attackEnd, decay);
+  return attackEnd + decay * STRUCK_TAIL_FACTOR + 0.03;
 }
 
 export function createSoundPlayer({ audioContextFactory } = {}) {
@@ -215,25 +266,19 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
     return oscillator;
   }
 
-  function scheduleNote(note, noteStartTime) {
-    const peak = note.gain ?? 1;
-    const releaseScale = note.releaseScale ?? 1;
-    const releaseStart = noteStartTime + note.duration;
-    const endTime = releaseStart + TAIL_SECONDS * releaseScale;
-
+  function scheduleNote(note, noteStartTime, struck) {
     const envelope = context.createGain();
-    envelope.gain.setValueAtTime(0.0001, noteStartTime);
-    envelope.gain.linearRampToValueAtTime(peak, noteStartTime + ATTACK_SECONDS);
-    envelope.gain.setValueAtTime(peak, releaseStart);
-    // setTargetAtTime tende a 0 in modo asintotico (esponenziale): la coda
-    // sfuma, l'oscillatore si ferma molto dopo che è diventata inudibile.
-    envelope.gain.setTargetAtTime(0, releaseStart, RELEASE_TIME_CONSTANT * releaseScale);
+    const endTime = struck
+      ? applyStruckEnvelope(envelope.gain, noteStartTime, note)
+      : applySustainedEnvelope(envelope.gain, noteStartTime, note);
     envelope.connect(masterGain);
     if (convolver) envelope.connect(convolver);
 
+    const octaveType = struck ? 'triangle' : note.type;
+    const octaveMix = struck ? STRUCK_OCTAVE_MIX : OCTAVE_MIX;
     const oscillators = [
       scheduleVoice(note.type, note.frequency, envelope, noteStartTime, endTime, 1),
-      scheduleVoice(note.type, note.frequency * 2, envelope, noteStartTime, endTime, OCTAVE_MIX),
+      scheduleVoice(octaveType, note.frequency * 2, envelope, noteStartTime, endTime, octaveMix),
     ];
     return { envelope, oscillators, endTime };
   }
@@ -268,10 +313,11 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
       stopPendingMilestone();
 
       const isMilestone = LEAD_SOUNDS.has(soundName);
+      const struck = STRUCK_SOUNDS.has(soundName);
       const startTime = context.currentTime + (isMilestone ? MILESTONE_LEAD_SECONDS : 0);
       const voices = [];
       for (const note of sequence) {
-        voices.push(scheduleNote(note, startTime + note.startAt));
+        voices.push(scheduleNote(note, startTime + note.startAt, struck));
       }
       if (isMilestone) pendingMilestoneVoices = voices;
     } catch {
