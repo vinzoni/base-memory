@@ -58,16 +58,21 @@ const MILESTONE_CANCEL_FADE_SECONDS = 0.04;
 const STRUCK_SOUNDS = new Set(['pairMatch', 'levelComplete']);
 
 // Ogni evento è una sequenza di note. `frequency` in Hz; `startAt` in secondi;
-// `gain` opzionale (0-1) abbassa la singola nota. Per i suoni "sustained":
-// `duration` è il sostegno prima del rilascio, `releaseScale` accorcia la coda.
-// Per i suoni "struck": `decay` è la costante di tempo del decadimento.
+// `gain` opzionale (0-1) abbassa la singola nota; `lowpassHz` opzionale smorza
+// le armoniche alte del fondamentale. Per i suoni "sustained": `duration` è il
+// sostegno prima del rilascio, `releaseScale` accorcia la coda. Per i suoni
+// "struck": `decay` è la costante di tempo del decadimento.
 const SOUND_SEQUENCES = {
   // Campanello squillante: din-don, attacco istantaneo e coda che decade. Onda
   // `square` (più ricca di armoniche di `triangle`, carattere arcade) sul
-  // fondamentale. Due note nitide, la seconda più acuta (Mi5 -> Si5, quinta).
+  // fondamentale, con un passa-basso a ~2.6 kHz che toglie l'asprezza stridula
+  // dell'onda quadra a volume pieno lasciando l'attacco brillante. Due note
+  // nitide, la seconda più acuta (Mi4 -> Si4, quinta): un'ottava sotto la
+  // versione precedente, che stava dove l'orecchio è più sensibile e affaticava
+  // sulle dodici ripetizioni per livello.
   pairMatch: [
-    { frequency: 659.25, type: 'square', startAt: 0, decay: 0.11, gain: 0.42 },
-    { frequency: 987.77, type: 'square', startAt: 0.12, decay: 0.17, gain: 0.42 },
+    { frequency: 329.63, type: 'square', startAt: 0, decay: 0.11, gain: 0.42, lowpassHz: 2600 },
+    { frequency: 493.88, type: 'square', startAt: 0.12, decay: 0.17, gain: 0.42, lowpassHz: 2600 },
   ],
   // Due note discendenti ravvicinate, sinusoide morbida a volume ridotto: il
   // suono che si sente più spesso mentre si impara, non deve diventare
@@ -249,16 +254,26 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
     enabled = Boolean(nextEnabled);
   }
 
-  function scheduleVoice(oscillatorType, frequency, envelope, startTime, stopTime, voiceGain) {
+  function scheduleVoice(oscillatorType, frequency, envelope, startTime, stopTime, voiceGain, lowpassHz) {
     const oscillator = context.createOscillator();
     oscillator.type = oscillatorType;
     oscillator.frequency.value = frequency;
+
+    let source = oscillator;
+    if (lowpassHz) {
+      const lowpass = context.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.value = lowpassHz;
+      oscillator.connect(lowpass);
+      source = lowpass;
+    }
+
     if (voiceGain === 1) {
-      oscillator.connect(envelope);
+      source.connect(envelope);
     } else {
       const gainNode = context.createGain();
       gainNode.gain.value = voiceGain;
-      oscillator.connect(gainNode);
+      source.connect(gainNode);
       gainNode.connect(envelope);
     }
     oscillator.start(startTime);
@@ -277,7 +292,7 @@ export function createSoundPlayer({ audioContextFactory } = {}) {
     const octaveType = struck ? 'triangle' : note.type;
     const octaveMix = struck ? STRUCK_OCTAVE_MIX : OCTAVE_MIX;
     const oscillators = [
-      scheduleVoice(note.type, note.frequency, envelope, noteStartTime, endTime, 1),
+      scheduleVoice(note.type, note.frequency, envelope, noteStartTime, endTime, 1, note.lowpassHz),
       scheduleVoice(octaveType, note.frequency * 2, envelope, noteStartTime, endTime, octaveMix),
     ];
     return { envelope, oscillators, endTime };
