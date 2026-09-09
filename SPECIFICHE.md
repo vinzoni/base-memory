@@ -341,6 +341,10 @@ Requisiti minimi di qualità:
 > binario a 5 cifre entra nella cella senza che nessuna tessera reclami spazio
 > extra. Tornerebbe se un livello o un ciclo futuro alzasse di nuovo il range.
 
+> **Limite noto:** il layout non si adatta bene agli schermi di telefono. I
+> colori e l'audio funzionano correttamente; il problema è la disposizione degli
+> elementi. Da affrontare dopo il completamento della versione web.
+
 ---
 
 ## 8. Fuori perimetro
