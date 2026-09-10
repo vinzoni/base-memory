@@ -18,7 +18,18 @@
   --text-h: #f2f3ff;                          /* testo primario ad alto contrasto */
 
   --accent: #b98cff;                          /* accento blu-violetto: freddo come il campo, distinto dai segnali di stato */
-  --base-pill-fg: #cbb8ff;                    /* etichetta base sulla tessera: accent schiarito per il contrasto */
+  /* Tinta della sigla di base sulla tessera, una per base: rinforza la ricerca
+     visiva durante il gioco. Il colore è ridondante (la sigla DEC/BIN/OCT/HEX
+     resta il segnale principale) e sta lontano da verde/rosso/viola degli stati
+     per non far sembrare "risolta"/"errata"/"selezionata" una tessera qualunque.
+     Le quattro tinte sono distribuite sulla ruota (azzurro, magenta, oro, lime),
+     non raggruppate: ogni coppia di sigle è distinguibile, non solo l'insieme.
+     Distanza di tinta minima tra le sei coppie: 56° (OCT-HEX); DEC-BIN, la
+     combinazione più usata, sta a 104°. Contrasto su --code-bg: tutte >= 5:1. */
+  --base-dec: #7eb2ff;                        /* azzurro */
+  --base-bin: #ec96d0;                        /* magenta */
+  --base-oct: #e7a93c;                        /* oro */
+  --base-hex: #8cd457;                        /* lime */
   --accent-strong: #5a48e0;                   /* faccia dei pulsanti primari */
   --accent-bg: rgba(150, 130, 255, 0.16);
   --accent-border: rgba(150, 130, 255, 0.5);
@@ -72,7 +83,10 @@
   --text: #6b6375;
   --text-h: #08060d;
   --accent: #aa3bff;
-  --base-pill-fg: #aa3bff;
+  --base-dec: #2f6fe0;
+  --base-bin: #c13c9c;
+  --base-oct: #8a6100;
+  --base-hex: #4f8f1f;
   --accent-strong: #aa3bff;
   --accent-bg: rgba(170, 59, 255, 0.1);
   --accent-border: rgba(170, 59, 255, 0.5);
@@ -601,8 +615,15 @@ code {
   padding: 3px 9px;
   border-radius: 999px;
   background: var(--code-bg);
-  color: var(--base-pill-fg);
 }
+
+/* Una tinta per base (vedi i token in :root). Solo il colore del testo: sfondo,
+   forma e dimensione della pill restano identici tra le basi, il colore è un
+   segnale in più sopra la sigla, non al suo posto. */
+.tile__base--DEC { color: var(--base-dec); }
+.tile__base--BIN { color: var(--base-bin); }
+.tile__base--OCT { color: var(--base-oct); }
+.tile__base--HEX { color: var(--base-hex); }
 
 .tile__icon {
   position: absolute;

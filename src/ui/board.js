@@ -81,7 +81,10 @@ function buildTile(tile, tileState, gameOver, onTileClick) {
 
   const baseLabel = BASES[tile.baseId].label;
   const baseEl = document.createElement('span');
-  baseEl.className = 'tile__base';
+  // La classe modificatrice porta solo la tinta per base (style.css). È una
+  // class, non un data-*, e il ramo "coperta" esce prima di qui: nessuna base
+  // finisce nel DOM di una tessera coperta (SPECIFICHE.md §2.7).
+  baseEl.className = `tile__base tile__base--${tile.baseId}`;
   baseEl.textContent = baseLabel;
   button.appendChild(baseEl);
 
