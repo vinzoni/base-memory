@@ -321,10 +321,15 @@ code {
   }
 }
 
+/* Usata anche dalla schermata di passaggio tra livelli (stesso className).
+   align-items: stretch — non center — così titolo, riquadro e pulsanti hanno
+   tutti la larghezza della colonna: stessa larghezza fra loro, bordi allineati.
+   Gli elementi con width esplicita (h1, fieldset, avviso pivot) non sono
+   toccati; a stringersi sono i pulsanti, che seguivano la lunghezza del testo. */
 .config-screen {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 20px;
   padding: 32px 20px;
   flex-grow: 1;
@@ -346,6 +351,13 @@ code {
 
 .config-screen__bases {
   width: 100%;
+  /* Come l'h1: con border-box la width 100% comprende padding e bordo, così i
+     due riquadri risultano larghi uguale invece di sforare la colonna. margin 0
+     azzera il margine inline che il browser dà ai <fieldset>; min-width 0 gli
+     toglie il min-content di default, perché possa stringersi su schermo stretto. */
+  box-sizing: border-box;
+  margin: 0;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
@@ -424,6 +436,15 @@ code {
     transform: translateY(3px);
     box-shadow: 0 2px 0 var(--button-shadow-secondary);
   }
+}
+
+/* Nella colonna della configurazione il toggle audio è largo quanto gli altri
+   pulsanti (align-items: stretch): il contenuto va centrato, e la larghezza non
+   dipende più dall'etichetta — "Attiva audio" e "Disattiva audio" hanno
+   lunghezze diverse e l'insieme oscillerebbe a ogni clic. Nella barra di gioco
+   il toggle resta invece dimensionato sul contenuto. */
+.config-screen > .audio-toggle {
+  justify-content: center;
 }
 
 .summary-screen {

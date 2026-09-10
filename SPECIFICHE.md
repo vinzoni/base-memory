@@ -311,6 +311,14 @@ Regole:
   far crashare l'app, ma ripartire da classifica vuota.
 - Deve esistere una funzione per azzerare la classifica.
 
+> **Nota di progetto:** la classifica è locale al singolo browser (`localStorage`),
+> non è condivisa fra giocatori né esiste un server. Azzerarla e scegliere il nome
+> riguardano quindi solo i dati di chi compie l'azione: non servono protezioni —
+> né una password sull'azzeramento, né un filtro sui nomi inseriti (la
+> sanificazione all'inserimento serve solo a non interpretare il nome come markup,
+> non a moderarlo). Servirebbero solo con una classifica condivisa lato server, che
+> oggi non esiste.
+
 ---
 
 ## 7. Interfaccia
