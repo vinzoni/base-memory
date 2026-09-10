@@ -15,6 +15,11 @@ const DEMO_REST_BASE = 'DEC';
 // si girano. Deve stare comodo dentro SPLASH_BASE_CYCLE_MS.
 const FLIP_DURATION_MS = 780;
 
+// Il ciclo delle basi parte dopo che il titolo è comparso: prima si annuncia
+// "Basi Gemelle", poi l'animazione illustra la conversione appena annunciata.
+// Coordinato con --splash-demo-delay in style.css (entrata della tessera).
+const CYCLE_START_DELAY_MS = 1500;
+
 export function renderSplashScreen(container, { onDismiss }) {
   // Lo stato di riposo definito nel CSS è già quello finale: con questa
   // preferenza attiva lo splash si vede completo e immobile, mai vuoto.
@@ -61,7 +66,9 @@ export function renderSplashScreen(container, { onDismiss }) {
   hint.className = 'splash-screen__hint';
   hint.textContent = 'Tocca lo schermo o premi un tasto per iniziare';
 
-  section.append(institution, demo, title, byline, credit, hint);
+  // Ordine verticale: prima il titolo, poi la tessera che lo illustra, poi la
+  // firma e la riga di aiuto. (institution è lo spazio riservato in cima.)
+  section.append(institution, title, demo, byline, credit, hint);
   container.replaceChildren(section);
 
   function showRep(baseId) {
@@ -86,22 +93,28 @@ export function renderSplashScreen(container, { onDismiss }) {
   showRep(DEMO_REST_BASE);
 
   let cycleId = null;
+  let cycleStartId = null;
   if (!reducedMotion) {
-    let stepIndex = 0;
-    cycleId = setInterval(() => {
-      stepIndex += 1;
-      if (stepIndex >= DEMO_BASE_SEQUENCE.length) {
-        // Giro completato: torna al riposo e ferma il ciclo (niente loop
-        // infinito su uno splash, che comunque prosegue da solo).
-        showRep(DEMO_REST_BASE);
+    // Il ciclo non parte subito: prima lascia comparire il titolo (vedi
+    // CYCLE_START_DELAY_MS).
+    cycleStartId = setTimeout(() => {
+      cycleStartId = null;
+      let stepIndex = 0;
+      cycleId = setInterval(() => {
+        stepIndex += 1;
+        if (stepIndex >= DEMO_BASE_SEQUENCE.length) {
+          // Giro completato: torna al riposo e ferma il ciclo (niente loop
+          // infinito su uno splash, che comunque prosegue da solo).
+          showRep(DEMO_REST_BASE);
+          flip();
+          clearInterval(cycleId);
+          cycleId = null;
+          return;
+        }
+        showRep(DEMO_BASE_SEQUENCE[stepIndex]);
         flip();
-        clearInterval(cycleId);
-        cycleId = null;
-        return;
-      }
-      showRep(DEMO_BASE_SEQUENCE[stepIndex]);
-      flip();
-    }, UI_TIMING.SPLASH_BASE_CYCLE_MS);
+      }, UI_TIMING.SPLASH_BASE_CYCLE_MS);
+    }, CYCLE_START_DELAY_MS);
   }
 
   let dismissed = false;
@@ -113,6 +126,7 @@ export function renderSplashScreen(container, { onDismiss }) {
 
   function cleanup() {
     clearTimeout(autoAdvanceId);
+    clearTimeout(cycleStartId);
     if (cycleId !== null) clearInterval(cycleId);
     window.removeEventListener('pointerdown', dismiss);
     window.removeEventListener('keydown', dismiss);

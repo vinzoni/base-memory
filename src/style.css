@@ -174,17 +174,20 @@ code {
 /* ---------- Splash iniziale ---------- */
 
 .splash-screen {
-  /* Tempi dello splash, tutti qui e non sparsi nelle regole. In scala con il
-     ciclo della tessera: SPLASH_BASE_CYCLE_MS (config.js) = 1500ms per
-     rappresentazione, ciclo di 4 transizioni = 6000ms. I ritardi di comparsa
-     scaglionano titolo/firma/aiuto mentre il ciclo scorre; l'ultimo finisce
+  /* Tempi dello splash, tutti qui e non sparsi nelle regole. Sequenza: prima
+     compare il titolo (delay 0) e resta; poi entra la tessera
+     (--splash-demo-delay) e subito dopo comincia a cambiare base
+     (CYCLE_START_DELAY_MS in splashScreen.js), illustrando quello che il titolo
+     ha annunciato — 4 transizioni a SPLASH_BASE_CYCLE_MS (config.js) l'una.
+     Firma e riga di aiuto compaiono a ciclo quasi concluso; l'ultima finisce
      prima di SPLASH_AUTO_ADVANCE_MS, lasciando un po' di quiete. */
   --splash-enter-duration: 1380ms;
   --splash-pill-fade: 600ms;
-  --splash-title-delay: 4500ms;
-  --splash-byline-delay: 6300ms;
-  --splash-credit-delay: 7500ms;
-  --splash-hint-delay: 8700ms;
+  --splash-title-delay: 0ms;
+  --splash-demo-delay: 1200ms;
+  --splash-byline-delay: 7800ms;
+  --splash-credit-delay: 8700ms;
+  --splash-hint-delay: 9600ms;
 
   flex-grow: 1;
   display: flex;
@@ -290,6 +293,7 @@ code {
    gestito a parte in splashScreen.js, con la stessa preferenza. */
 @media (prefers-reduced-motion: no-preference) {
   .splash-screen__title,
+  .splash-screen__demo,
   .splash-screen__byline,
   .splash-screen__credit,
   .splash-screen__hint {
@@ -298,6 +302,9 @@ code {
 
   .splash-screen__title {
     animation-delay: var(--splash-title-delay);
+  }
+  .splash-screen__demo {
+    animation-delay: var(--splash-demo-delay);
   }
   .splash-screen__byline {
     animation-delay: var(--splash-byline-delay);
