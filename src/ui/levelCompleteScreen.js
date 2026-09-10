@@ -1,6 +1,6 @@
 export function renderLevelCompleteScreen(
   container,
-  { state, completedLevel, nextLevel, pivotDropped, onContinue }
+  { state, completedLevel, nextLevel, pivotDropped, onContinue, onAbandon }
 ) {
   const section = document.createElement('section');
   section.className = 'config-screen';
@@ -27,6 +27,16 @@ export function renderLevelCompleteScreen(
   continueButton.textContent = `Continua con ${nextLevel.name}`;
   continueButton.addEventListener('click', () => onContinue());
   section.appendChild(continueButton);
+
+  // Secondo, dopo "Continua" nell'ordine di tabulazione: l'azione sicura resta
+  // la prima. Chi deve smettere prima della fine (in aula la lezione finisce a
+  // orario fisso) esce da qui senza aspettare il livello successivo.
+  const abandonButton = document.createElement('button');
+  abandonButton.type = 'button';
+  abandonButton.className = 'screen-secondary-button';
+  abandonButton.textContent = 'Abbandona partita';
+  abandonButton.addEventListener('click', () => onAbandon());
+  section.appendChild(abandonButton);
 
   container.replaceChildren(section);
 }

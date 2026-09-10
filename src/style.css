@@ -441,24 +441,31 @@ code {
   flex-grow: 1;
 }
 
-/* Barra sopra l'HUD: per ora contiene solo il toggle audio, allineato a destra
-   e largo quanto HUD e board. */
+/* Barra sopra l'HUD: toggle audio e pulsante di abbandono, allineati a destra e
+   larghi quanto HUD e board. flex-wrap perché su schermo stretto le due etichette
+   italiane non stanno su una riga. */
 .game-screen__toolbar {
   width: 100%;
   max-width: 640px;
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  gap: 12px;
 }
 
-/* Interruttore audio: usa .screen-secondary-button come base ma più compatto,
-   è un controllo di servizio, non un'azione primaria. */
+/* Controlli di servizio della barra di gioco: usano .screen-secondary-button
+   come base ma più compatti, non sono azioni primarie. */
+.audio-toggle,
+.game-screen__abandon {
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
 .audio-toggle {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 16px;
-  font-size: 14px;
-  font-weight: 600;
 }
 
 .audio-toggle__icon {

@@ -6,6 +6,7 @@ export const GAME_STATUS = {
   LEVEL_COMPLETE: 'levelComplete',
   WON: 'won',
   LOST: 'lost',
+  ABANDONED: 'abandoned',
 };
 
 // Selezione individuale (non a coppie): è legittimo che di una coppia una sola
@@ -69,6 +70,24 @@ export function advanceToNextLevel(state, { level, selectedBases, random = Math.
 export function finishGame(state) {
   if (state.status !== GAME_STATUS.LEVEL_COMPLETE) return state;
   return { ...state, status: GAME_STATUS.WON };
+}
+
+// Abbandono volontario: il giocatore chiude la partita prima della fine (in aula
+// la lezione finisce a orario fisso). Ammesso sia durante il gioco (PLAYING) sia
+// dalla schermata intermedia tra un livello e il successivo (LEVEL_COMPLETE). Il
+// punteggio maturato resta com'è: nessun bonus per il livello non completato,
+// nessuna penalità — interrompere fa solo rinunciare ai punti dei livelli
+// successivi, non dà un vantaggio a chi resta fermo ad aspettare lo scadere del
+// tempo.
+export function abandonGame(state, now) {
+  if (state.status !== GAME_STATUS.PLAYING && state.status !== GAME_STATUS.LEVEL_COMPLETE) {
+    return state;
+  }
+  // Da PLAYING l'orologio si ferma su `now`, come checkTimeout e la fine livello.
+  // Da LEVEL_COMPLETE finishedAt è già fissato all'istante del completamento e va
+  // conservato: sovrascriverlo con `now` conterebbe come tempo di gioco anche
+  // quello passato sulla schermata intermedia (SPECIFICHE.md §4).
+  return { ...state, status: GAME_STATUS.ABANDONED, finishedAt: state.finishedAt ?? now };
 }
 
 // A partita terminata l'orologio si ferma su finishedAt: `now` viene ignorato per

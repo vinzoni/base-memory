@@ -3,6 +3,14 @@ import { formatTime } from './hud.js';
 import { createIcon } from './icons.js';
 import { MAX_PLAYER_NAME_LENGTH } from '../config.js';
 
+// I tre esiti possibili di una partita conclusa: il titolo è l'unico segnale che
+// li distingue (come già avveniva per vittoria e sconfitta).
+const SUMMARY_HEADINGS = {
+  [GAME_STATUS.WON]: 'Tutti i livelli completati!',
+  [GAME_STATUS.LOST]: 'Tempo scaduto',
+  [GAME_STATUS.ABANDONED]: 'Partita abbandonata',
+};
+
 function buildStat(iconName, label, value) {
   const wrapper = document.createElement('div');
   wrapper.className = 'summary-screen__stat';
@@ -69,7 +77,7 @@ export function renderSummaryScreen(container, { state, level, qualifies, onSave
   section.className = 'summary-screen';
 
   const heading = document.createElement('h1');
-  heading.textContent = state.status === GAME_STATUS.WON ? 'Tutti i livelli completati!' : 'Tempo scaduto';
+  heading.textContent = SUMMARY_HEADINGS[state.status] ?? SUMMARY_HEADINGS[GAME_STATUS.LOST];
   section.appendChild(heading);
 
   const totalPairCount = state.tiles.length / 2;

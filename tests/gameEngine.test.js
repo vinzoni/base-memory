@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   GAME_STATUS,
+  abandonGame,
   acknowledgeMismatch,
   advanceToNextLevel,
   checkTimeout,
@@ -362,6 +363,40 @@ describe('stato congelato a partita terminata', () => {
     const lostState = twoPairState({ status: GAME_STATUS.LOST, finishedAt: 181000 });
     expect(getRemainingSeconds(lostState, 999999)).toBe(0);
   });
+
+  it('dopo un abbandono da PLAYING selectTile e checkTimeout sono no-op', () => {
+    const abandoned = abandonGame(twoPairState({ startedAt: 0 }), 30000);
+    expect(selectTile(abandoned, 'p0-DEC', 999999)).toBe(abandoned);
+    expect(checkTimeout(abandoned, 999999)).toBe(abandoned);
+  });
+
+  it('dopo un abbandono da PLAYING l\'orologio resta fermo su finishedAt', () => {
+    const abandoned = abandonGame(twoPairState({ startedAt: 0, timeLimitSeconds: 180 }), 30000);
+
+    const elapsedRightAfter = getElapsedSeconds(abandoned, 30000);
+    const remainingRightAfter = getRemainingSeconds(abandoned, 30000);
+    const totalRightAfter = getTotalElapsedSeconds(abandoned, 30000);
+
+    expect(elapsedRightAfter).toBe(30);
+    expect(getElapsedSeconds(abandoned, 999999999)).toBe(elapsedRightAfter);
+    expect(getRemainingSeconds(abandoned, 999999999)).toBe(remainingRightAfter);
+    expect(getTotalElapsedSeconds(abandoned, 999999999)).toBe(totalRightAfter);
+  });
+
+  it('abbandono da LEVEL_COMPLETE: il tempo totale è quello giocato, non gonfiato dalla schermata intermedia', () => {
+    // Livello concluso in 5s (startedAt 0 → finishedAt 5000), niente livelli
+    // precedenti. L'abbandono avviene 100s dopo, stando sulla schermata di
+    // fine livello: quei 100s non devono contare.
+    const levelCompleted = twoPairState({
+      status: GAME_STATUS.LEVEL_COMPLETE,
+      startedAt: 0,
+      finishedAt: 5000,
+      elapsedBeforeCurrentLevel: 0,
+    });
+
+    const abandoned = abandonGame(levelCompleted, 105000);
+    expect(getTotalElapsedSeconds(abandoned, 105000)).toBe(5);
+  });
 });
 
 describe('integrazione: cablaggio end-to-end con createGame fino a WON', () => {
@@ -502,6 +537,69 @@ describe('finishGame', () => {
   it('è un no-op se lo stato non è LEVEL_COMPLETE', () => {
     const state = twoPairState({ status: GAME_STATUS.PLAYING });
     expect(finishGame(state)).toBe(state);
+  });
+});
+
+describe('abandonGame', () => {
+  it('da PLAYING passa ad ABANDONED e ferma l\'orologio su now (finishedAt era null)', () => {
+    const state = twoPairState({ startedAt: 0, finishedAt: null });
+    const result = abandonGame(state, 42000);
+
+    expect(result.status).toBe(GAME_STATUS.ABANDONED);
+    expect(result.finishedAt).toBe(42000);
+  });
+
+  it('conserva punteggio, errori e coppie risolte maturati fino all\'abbandono', () => {
+    const state = twoPairState({
+      resolvedPairIds: [0],
+      score: 175,
+      errorCount: 2,
+    });
+    const result = abandonGame(state, 42000);
+
+    expect(result.score).toBe(175);
+    expect(result.errorCount).toBe(2);
+    expect(result.resolvedPairIds).toEqual([0]);
+  });
+
+  it('da LEVEL_COMPLETE conserva il finishedAt del completamento, non lo sovrascrive con now', () => {
+    // finishedAt è l'istante in cui il livello è stato completato: il tempo poi
+    // passato sulla schermata intermedia non deve entrare nel conteggio.
+    const state = twoPairState({
+      status: GAME_STATUS.LEVEL_COMPLETE,
+      startedAt: 0,
+      finishedAt: 5000,
+    });
+    const result = abandonGame(state, 999000);
+
+    expect(result.status).toBe(GAME_STATUS.ABANDONED);
+    expect(result.finishedAt).toBe(5000);
+  });
+
+  it('è un no-op da WON, LOST o ABANDONED', () => {
+    for (const status of [GAME_STATUS.WON, GAME_STATUS.LOST, GAME_STATUS.ABANDONED]) {
+      const state = twoPairState({ status, finishedAt: 5000 });
+      expect(abandonGame(state, 999000)).toBe(state);
+    }
+  });
+
+  it('integrazione: createGame → risolvo una coppia → abandonGame trattiene i punti di quella coppia', () => {
+    let state = createGame({
+      level: LEVEL_1,
+      selectedBases: ['DEC', 'BIN'],
+      random: mulberry32(1),
+      startedAt: 0,
+    });
+
+    const [firstPair] = groupTilesByPairId(state.tiles);
+    state = selectTile(state, firstPair[0].id, 1000);
+    state = selectTile(state, firstPair[1].id, 2000);
+    expect(state.score).toBe(SCORING.PAIR_MATCH_POINTS);
+
+    const abandoned = abandonGame(state, 30000);
+    expect(abandoned.status).toBe(GAME_STATUS.ABANDONED);
+    expect(abandoned.score).toBe(SCORING.PAIR_MATCH_POINTS);
+    expect(abandoned.resolvedPairIds).toHaveLength(1);
   });
 });
 

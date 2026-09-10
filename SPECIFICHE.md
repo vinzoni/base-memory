@@ -248,6 +248,27 @@ livello appena concluso. Su quella transizione:
 Un fallimento (tempo scaduto) in un livello qualsiasi termina subito la partita,
 senza passare al successivo. Dopo l'ultimo livello, la partita termina in vittoria.
 
+### Abbandono della partita
+
+Una partita in corso può essere **abbandonata** dal giocatore, sia durante un
+livello sia dalla schermata intermedia di fine livello: una lezione in aula
+finisce a orario fisso e chi deve smettere non può aspettare la fine del livello.
+
+- l'abbandono chiede **conferma** prima di avere effetto: un clic o un tasto
+  premuto per sbaglio non deve buttare via una partita;
+- porta alla schermata di riepilogo con il punteggio maturato e il livello
+  raggiunto fino a quel momento;
+- il punteggio non viene toccato dall'abbandono: nessun bonus per il livello non
+  completato, nessuna penalità. Interrompere fa solo rinunciare ai punti dei
+  livelli successivi. Trattarlo diversamente premierebbe chi resta fermo ad
+  aspettare lo scadere del tempo invece di chiudere;
+- il punteggio di una partita abbandonata entra in classifica **come gli altri**,
+  senza contrassegni;
+- il **tempo totale** si ferma all'abbandono, con la stessa regola delle altre
+  fini partita (al netto del tempo passato sulla schermata intermedia);
+- nel riepilogo il titolo distingue l'esito "abbandonata" da quello di una
+  vittoria e da quello di una sconfitta per tempo scaduto.
+
 ---
 
 ## 5. Punteggio
@@ -263,6 +284,8 @@ Regole:
 
 - il bonus velocità e il bonus di completamento si assegnano **solo** se il livello
   viene superato entro il tempo;
+- l'abbandono volontario (si veda §4) non modifica il punteggio: né bonus né
+  penalità, resta quello maturato fino a quel momento;
 - il punteggio non può scendere sotto `0` durante la partita;
 - i valori sopra sono costanti centralizzate in un unico modulo di configurazione,
   non "numeri magici" sparsi nel codice.
@@ -290,7 +313,9 @@ Regole:
 
 Schermate: **Configurazione → Partita → (schermata intermedia di fine livello, se
 ce n'è un altro) → Riepilogo fine partita**, più una vista **Classifica**
-raggiungibile dalla configurazione.
+raggiungibile dalla configurazione. Dalla partita e dalla schermata intermedia si
+può anche uscire in anticipo abbandonando (si veda §4), arrivando comunque al
+riepilogo.
 
 Durante la partita sono sempre visibili: livello corrente, tempo rimanente,
 punteggio corrente, coppie risolte su totale, numero di errori.
@@ -315,11 +340,19 @@ Requisiti minimi di qualità:
   quindi ignorato (si veda §4);
 - avviso alla transizione tra livelli quando il vincolo pivot decimale decade
   (si veda §4);
+- pulsante per abbandonare la partita (si veda §4), presente sia nella schermata
+  di gioco sia in quella intermedia di fine livello, con conferma prima di avere
+  effetto. Nella schermata di gioco sta nella barra in alto accanto al controllo
+  dell'audio, dopo di esso nell'ordine di tabulazione; in quella intermedia viene
+  dopo il pulsante per continuare, così l'azione sicura resta la prima;
+- il riepilogo di fine partita distingue dal titolo i tre esiti possibili:
+  vittoria, sconfitta per tempo scaduto, abbandono;
 - effetti sonori sintetici (Web Audio, nessun file audio) per: coppia corretta,
   errore, livello completato, tempo sceso sotto i 30 secondi (emesso una sola
   volta), fine partita con vittoria e sconfitta distinte. Suoni brevi, di tipo
   arcade; quello dell'errore è riconoscibile come negativo senza essere
-  punitivo;
+  punitivo. L'abbandono **non** ha un suono: è un'azione da menu dietro una
+  conferma, non un evento di gioco;
 - interruttore per silenziare l'audio, raggiungibile sia dalla configurazione
   sia durante la partita. La preferenza è persistente ed è ricordata per
   macchina; l'audio parte **disattivato**, perché in aula molte postazioni

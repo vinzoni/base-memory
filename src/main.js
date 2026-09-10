@@ -1,6 +1,7 @@
 import './style.css';
 import {
   GAME_STATUS,
+  abandonGame,
   acknowledgeMismatch,
   advanceToNextLevel,
   checkTimeout,
@@ -33,6 +34,12 @@ const FIRST_LEVEL = getLevelById(1);
 // su altri livelli, l'avviso in configurazione deve restare corretto.
 const HAS_DECIMAL_PIVOT_LEVEL = LEVELS.some((lvl) => lvl.requireDecimalPivot);
 const screens = createScreenManager(document.querySelector('#app'));
+
+// Testo unico della conferma di abbandono, condiviso dai due punti in cui il
+// pulsante compare (schermata di gioco e schermata di fine livello). Dice le due
+// cose che contano: la partita finisce, il punteggio resta valido.
+const ABANDON_CONFIRM_MESSAGE =
+  'Abbandonare la partita in corso? Il punteggio maturato finora resta valido ed entra in classifica, ma la partita finisce qui.';
 
 // Il vincolo pivot decimale restringe davvero la generazione delle coppie solo
 // quando DEC è tra le basi selezionate (senza, applyDecimalPivot lo ignora) e le
@@ -124,10 +131,18 @@ function renderGameScreen(container, { selectedBases, level, previousState, onLe
   const hudEl = container.querySelector('#hud');
   const boardEl = container.querySelector('#board');
 
-  // Il toggle audio si costruisce una volta sola, fuori dal ciclo di renderHud:
-  // renderHud fa replaceChildren su #hud a ogni tick del timer e distruggerebbe
-  // il pulsante (e il focus da tastiera su di esso).
-  container.querySelector('.game-screen__toolbar').appendChild(createAudioToggle(audioControl));
+  // Barra in alto: toggle audio e pulsante di abbandono. Il toggle si costruisce
+  // una volta sola, fuori dal ciclo di renderHud (che fa replaceChildren su #hud
+  // a ogni tick e distruggerebbe il pulsante e il focus da tastiera su di esso).
+  // Il pulsante di abbandono va dopo il toggle: nell'ordine di tabulazione il
+  // primo Tab dall'inizio pagina cade sul toggle (innocuo), non sull'abbandono.
+  const toolbar = container.querySelector('.game-screen__toolbar');
+  toolbar.appendChild(createAudioToggle(audioControl));
+  const abandonButton = document.createElement('button');
+  abandonButton.type = 'button';
+  abandonButton.className = 'screen-secondary-button game-screen__abandon';
+  abandonButton.textContent = 'Abbandona partita';
+  toolbar.appendChild(abandonButton);
 
   let state = previousState
     ? advanceToNextLevel(previousState, { level, selectedBases, startedAt: Date.now() })
@@ -229,6 +244,21 @@ function renderGameScreen(container, { selectedBases, level, previousState, onLe
     }
   }, UI_TIMING.TIMER_TICK_INTERVAL_MS);
 
+  // La conferma è la seconda protezione (oltre alla posizione dopo il toggle
+  // audio) contro un'attivazione involontaria.
+  abandonButton.addEventListener('click', () => {
+    if (state.status !== GAME_STATUS.PLAYING) return;
+    // `now` letto prima di confirm(): la dialog blocca l'event loop (il timer non
+    // scatta finché è aperta) e il tempo speso a decidere non deve contare. Se
+    // l'utente annulla, il tick successivo rileva l'eventuale timeout nel modo
+    // consueto.
+    const now = Date.now();
+    if (!window.confirm(ABANDON_CONFIRM_MESSAGE)) return;
+    clearInterval(timerId);
+    state = abandonGame(state, now);
+    onGameOver(state);
+  });
+
   renderFullBoard();
   renderHudNow();
 
@@ -265,6 +295,12 @@ function showLevelCompleteScreen(selectedBases, state, nextLevel) {
       nextLevel,
       pivotDropped,
       onContinue: () => showLevel(selectedBases, nextLevel, state),
+      onAbandon: () => {
+        if (!window.confirm(ABANDON_CONFIRM_MESSAGE)) return;
+        // Qui il timer è già fermo e finishedAt fissato al completamento del
+        // livello: abandonGame conserva quel valore e ignora l'istante passato.
+        showSummaryScreen(selectedBases, abandonGame(state, Date.now()));
+      },
     })
   );
 }
