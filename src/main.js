@@ -18,6 +18,7 @@ import { renderHud } from './ui/hud.js';
 import { createSoundPlayer } from './ui/sounds.js';
 import { createAudioToggle } from './ui/audioToggle.js';
 import { renderConfigScreen } from './ui/configScreen.js';
+import { renderSplashScreen } from './ui/splashScreen.js';
 import { renderSummaryScreen } from './ui/summaryScreen.js';
 import { renderLevelCompleteScreen } from './ui/levelCompleteScreen.js';
 import { renderHighScoresScreen } from './ui/highScoresScreen.js';
@@ -97,7 +98,7 @@ sounds.setEnabled(audioEnabled);
 
 // L'AudioContext deve nascere da un gesto dell'utente (i browser bloccano
 // l'audio prima di un'interazione). Il primo pointerdown/keydown utile lo
-// sblocca — di fatto già il click su "Inizia".
+// sblocca — di fatto già il clic che salta lo splash.
 function unlockAudio() {
   sounds.unlock();
 }
@@ -366,4 +367,19 @@ function showConfigScreen() {
   );
 }
 
-showConfigScreen();
+function showSplashScreen() {
+  screens.show((container) =>
+    renderSplashScreen(container, {
+      onDismiss: () => {
+        // Il gesto che salta lo splash è il primo gesto utile sulla pagina: è
+        // qui che l'AudioContext può nascere. I listener {once:true} su document
+        // lo farebbero comunque (il gesto risale fin lì e non viene fermato),
+        // questa è la garanzia esplicita — sounds.unlock() è idempotente.
+        unlockAudio();
+        showConfigScreen();
+      },
+    })
+  );
+}
+
+showSplashScreen();

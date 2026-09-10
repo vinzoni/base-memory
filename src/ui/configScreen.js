@@ -52,7 +52,7 @@ export function renderConfigScreen(
   section.className = 'config-screen';
 
   const heading = document.createElement('h1');
-  heading.textContent = 'Base Memory';
+  heading.textContent = 'Basi Gemelle';
   section.appendChild(heading);
 
   const fieldset = document.createElement('fieldset');

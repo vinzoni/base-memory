@@ -8,6 +8,9 @@ Istruzioni per Claude Code su questo repository.
 numeriche (decimale, binario, ottale, esadecimale). Meccanica tipo Memory, ma le
 tessere si accoppiano quando rappresentano lo **stesso valore in basi diverse**.
 
+Il titolo visibile nel gioco è **«Basi Gemelle»**; il nome del repository e del
+pacchetto npm resta `base-memory`.
+
 Le specifiche funzionali complete sono in **`SPECIFICHE.md`**: leggilo prima di
 implementare qualsiasi cosa e consideralo la fonte di verità.
 
@@ -52,6 +55,7 @@ src/
     highScores.js       # classifica (storage iniettato, mai globale)
   ui/
     screens.js          # navigazione tra schermate
+    splashScreen.js     # splash iniziale (titolo, firma, tessera dimostrativa)
     configScreen.js     # selezione basi + anteprima coppie
     board.js            # griglia e tessere
     hud.js              # tempo, punteggio, contatori

@@ -34,4 +34,12 @@ export const UI_TIMING = {
   MISMATCH_FEEDBACK_MS: 700,
   TIMER_TICK_INTERVAL_MS: 250,
   TIME_WARNING_THRESHOLD_SECONDS: 20,
+  // Splash iniziale: dopo quanto prosegue da solo alla configurazione se non
+  // viene saltato, e cadenza con cui la tessera dimostrativa cambia base. Il
+  // ciclo è di 4 transizioni (DEC→BIN→OCT→HEX→DEC), quindi
+  // 4 * SPLASH_BASE_CYCLE_MS = 6000ms; l'avanzamento automatico lascia poi
+  // qualche secondo di quiete. I tempi di comparsa di titolo/firma/aiuto
+  // (custom properties --splash-*-delay in style.css) vanno tenuti in scala.
+  SPLASH_AUTO_ADVANCE_MS: 12000,
+  SPLASH_BASE_CYCLE_MS: 1500,
 };

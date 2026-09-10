@@ -171,6 +171,156 @@ code {
   box-sizing: border-box;
 }
 
+/* ---------- Splash iniziale ---------- */
+
+.splash-screen {
+  /* Tempi dello splash, tutti qui e non sparsi nelle regole. In scala con il
+     ciclo della tessera: SPLASH_BASE_CYCLE_MS (config.js) = 1500ms per
+     rappresentazione, ciclo di 4 transizioni = 6000ms. I ritardi di comparsa
+     scaglionano titolo/firma/aiuto mentre il ciclo scorre; l'ultimo finisce
+     prima di SPLASH_AUTO_ADVANCE_MS, lasciando un po' di quiete. */
+  --splash-enter-duration: 1380ms;
+  --splash-pill-fade: 600ms;
+  --splash-title-delay: 4500ms;
+  --splash-byline-delay: 6300ms;
+  --splash-credit-delay: 7500ms;
+  --splash-hint-delay: 8700ms;
+
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 20px;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+/* Spazio riservato per un futuro logo + nome di una scuola (non implementati):
+   fissare qui l'altezza minima evita che aggiungerli in seguito spinga in giù
+   titolo e firma. */
+.splash-screen__institution {
+  min-height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.splash-screen__demo {
+  display: flex;
+  justify-content: center;
+  perspective: 600px;
+}
+
+/* Tessera dimostrativa: stessi token di rilievo delle tessere di gioco, ma
+   statica e fuori dalla griglia — nessuno degli stati interattivi di .tile. */
+.splash-screen__tile {
+  width: 128px;
+  aspect-ratio: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 2px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--tile-bg);
+  box-shadow: inset 0 1px 0 var(--panel-highlight), 0 3px 0 var(--tile-shadow);
+  font-family: var(--mono);
+  color: var(--text-h);
+}
+
+.splash-screen__tile-value {
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.splash-screen__tile .tile__base {
+  transition: color var(--splash-pill-fade) ease;
+}
+
+/* <h1> per semantica (è il nome del gioco), ma qui non è la "fascia" di
+   intestazione delle altre schermate: si annulla il trattamento del selettore
+   globale e resta la sola tipografia. */
+.splash-screen__title {
+  width: auto;
+  margin: 0;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  font-size: 44px;
+  line-height: 1.1;
+  letter-spacing: -1.2px;
+}
+
+.splash-screen__byline {
+  color: var(--text-h);
+  font-size: 16px;
+  line-height: 1.4;
+}
+
+.splash-screen__credit {
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.splash-screen__hint {
+  margin-top: 4px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  opacity: 0.8;
+}
+
+@media (max-width: 1024px) {
+  .splash-screen__title {
+    font-size: 34px;
+  }
+}
+
+/* Le animazioni vivono solo qui: lo stato dichiarato sopra è già quello finale,
+   quindi con prefers-reduced-motion attivo (o senza supporto al media query)
+   lo splash si vede completo e immobile, mai vuoto. Il ciclo della tessera è
+   gestito a parte in splashScreen.js, con la stessa preferenza. */
+@media (prefers-reduced-motion: no-preference) {
+  .splash-screen__title,
+  .splash-screen__byline,
+  .splash-screen__credit,
+  .splash-screen__hint {
+    animation: splash-enter var(--splash-enter-duration) ease-out both;
+  }
+
+  .splash-screen__title {
+    animation-delay: var(--splash-title-delay);
+  }
+  .splash-screen__byline {
+    animation-delay: var(--splash-byline-delay);
+  }
+  .splash-screen__credit {
+    animation-delay: var(--splash-credit-delay);
+  }
+  .splash-screen__hint {
+    animation-delay: var(--splash-hint-delay);
+  }
+}
+
+@keyframes splash-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 .config-screen {
   display: flex;
   flex-direction: column;

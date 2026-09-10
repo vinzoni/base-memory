@@ -5,6 +5,10 @@ Struttura ispirata al Memory: una griglia di tessere da accoppiare due a due,
 su una progressione di 16 livelli organizzata in due cicli di difficoltà
 crescente (si veda §4, "Struttura a cicli").
 
+Il titolo visibile nel gioco (splash, `<title>` della pagina, intestazione della
+configurazione) è **«Basi Gemelle»**. Il nome del repository e del pacchetto npm
+resta `base-memory`.
+
 ---
 
 ## 1. Concetto di gioco
@@ -311,11 +315,35 @@ Regole:
 
 ## 7. Interfaccia
 
-Schermate: **Configurazione → Partita → (schermata intermedia di fine livello, se
-ce n'è un altro) → Riepilogo fine partita**, più una vista **Classifica**
-raggiungibile dalla configurazione. Dalla partita e dalla schermata intermedia si
-può anche uscire in anticipo abbandonando (si veda §4), arrivando comunque al
-riepilogo.
+Schermate: **Splash → Configurazione → Partita → (schermata intermedia di fine
+livello, se ce n'è un altro) → Riepilogo fine partita**, più una vista
+**Classifica** raggiungibile dalla configurazione. Dalla partita e dalla schermata
+intermedia si può anche uscire in anticipo abbandonando (si veda §4), arrivando
+comunque al riepilogo.
+
+### Splash iniziale
+
+Compare **a ogni apertura**, prima della configurazione (nessuna preferenza
+persistente: non va saltato "per sempre").
+
+- riporta il titolo del gioco («Basi Gemelle») e la firma su due righe: "di
+  Andrea Vinzoni" e, sotto, "sviluppato con Claude (Anthropic)";
+- si salta in qualunque momento con un clic, un tocco o un tasto — uno studente
+  riapre il gioco più volte in un'ora e un'animazione non saltabile diventa un
+  ostacolo dalla seconda volta in poi;
+- se non viene saltato prosegue da solo alla configurazione
+  (`UI_TIMING.SPLASH_AUTO_ADVANCE_MS`), lasciando qualche istante di quiete dopo
+  il ciclo della tessera;
+- il gesto che lo salta è anche il primo gesto utile della pagina: è il momento
+  in cui l'AudioContext viene sbloccato (si veda l'unlock in `main.js`);
+- animazione: una tessera, con l'estetica di quelle di gioco, mostra lo stesso
+  numero cambiando base (decimale → binario → ottale → esadecimale) e torna al
+  riposo — la conversione mostrata senza spiegarla, con i colori già in uso;
+- rispetta `prefers-reduced-motion`: con la preferenza attiva il contenuto si
+  vede completo e immobile (titolo, firma, tessera a riposo), non uno splash
+  vuoto;
+- il layout riserva uno spazio in alto per un futuro logo + nome di una scuola,
+  non ancora implementati.
 
 Durante la partita sono sempre visibili: livello corrente, tempo rimanente,
 punteggio corrente, coppie risolte su totale, numero di errori.
