@@ -720,19 +720,14 @@ code {
   display: grid;
   /* repeat() richiede un intero letterale: min()/calc() al suo posto rendono
      l'intera dichiarazione non valida (viene scartata, la griglia ricade
-     sul posizionamento implicito). Il numero di colonne, già ridotto per gli
-     schermi stretti, va quindi risolto in board.js e scritto qui come valore
-     singolo, non calcolato in CSS. */
+     sul posizionamento implicito). Il numero di colonne è sempre quello ideale
+     per il conteggio di tessere (risolto in board.js, scritto qui come valore
+     singolo); minmax(0, 1fr) lascia rimpicciolire le tessere su schermo stretto
+     invece di ridurre le colonne. */
   grid-template-columns: repeat(var(--board-columns), minmax(0, 1fr));
   gap: 12px;
   width: 100%;
   max-width: 640px;
-}
-
-@media (max-width: 400px) {
-  .board {
-    gap: 8px;
-  }
 }
 
 .tile {
@@ -881,23 +876,117 @@ code {
   opacity: 0.6;
 }
 
-@media (max-width: 400px) {
-  .tile__value {
-    font-size: 18px;
+/* Desktop, da 6 colonne in su (griglie 6x4 e 6x6): a piena larghezza la cella
+   è stretta e il font va ridotto. Su schermo piccolo ci pensano i container
+   query più sotto, indipendenti dal numero di colonne. */
+.board--tight .tile__value {
+  font-size: 16px;
+}
+
+/* ---------- Schermo piccolo: telefono in verticale, o in orizzontale dove
+   l'altezza è poca. Priorità assoluta (SPECIFICHE.md §7): tutto il tavolo
+   visibile senza scorrere. Si rimpiccioliscono le tessere, non le colonne. ---------- */
+@media (max-width: 500px), (max-height: 520px) and (max-width: 900px) {
+  .game-screen {
+    padding: 8px;
+    gap: 10px;
   }
 
-  .tile__base {
-    font-size: 12px;
+  /* Audio: solo icona, per non consumare altezza. L'etichetta esce dal campo
+     visivo ma resta nell'albero di accessibilità, così il nome accessibile del
+     pulsante non cambia. Stesso trattamento per le etichette dell'HUD, la cui
+     informazione è comunque già nell'aria-label di .hud__item. */
+  .audio-toggle > span:last-child,
+  .hud__item-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .audio-toggle {
+    padding: 8px;
+  }
+
+  .hud {
+    gap: 6px 8px;
+    padding: 8px 10px;
+    justify-content: space-between;
+  }
+  .hud__item {
+    gap: 5px;
+  }
+  .hud__item-value {
+    font-size: 16px;
+  }
+
+  .board {
+    gap: 4px;
+  }
+
+  /* Il font delle tessere scala sulla larghezza della cella (container query):
+     una regola sola per ogni griglia, senza dipendere dal numero di colonne.
+     Selettore .board .tile__* per battere .board--tight .tile__value (stessa
+     specificità, questo blocco viene dopo). line-height esplicita e senza
+     unità: la 145% ereditata da :root, risolta in px, sfonderebbe la cella
+     (vedi limite noto in SPECIFICHE.md §7). */
+  .tile {
+    container-type: inline-size;
+  }
+  .board .tile__value {
+    font-size: clamp(12px, 29cqi, 19px);
+    line-height: 1.15;
+  }
+  .board .tile__base {
+    font-size: clamp(8px, 20cqi, 11px);
+    line-height: 1.2;
+    padding: 2px 6px;
+  }
+  .board .tile__cover-icon {
+    font-size: clamp(16px, 45cqi, 28px);
   }
 }
 
-/* Il font si riduce da 6 colonne in poi (Livelli 3-8 e 11-18): con range fino
-   a 0-255 le tessere potevano mostrare binari a 8 cifre a 22px, che non
-   entravano nella cella. Il range massimo è ora 0-31 (5 cifre) e il difetto
-   non si manifesta più, ma la causa non è mai stata individuata
-   (SPECIFICHE.md §7): tornerebbe alzando di nuovo il range. */
-.board--tight .tile__value {
-  font-size: 16px;
+/* ---------- Telefono in orizzontale: qui il vincolo è l'altezza. HUD e barra
+   passano a lato, il tavolo prende tutta l'altezza e le tessere diventano larghe
+   e basse — numero e sigla in fila, così basta l'altezza di una riga. ---------- */
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 900px) {
+  .game-screen {
+    display: grid;
+    grid-template-columns: minmax(112px, 160px) 1fr;
+    grid-template-areas:
+      'toolbar board'
+      'hud     board';
+    align-items: start;
+    align-content: start;
+    gap: 8px 12px;
+  }
+  .game-screen__toolbar {
+    grid-area: toolbar;
+    max-width: none;
+  }
+  .hud {
+    grid-area: hud;
+    max-width: none;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 6px;
+  }
+  .board {
+    grid-area: board;
+    max-width: none;
+  }
+  .tile {
+    aspect-ratio: auto;
+    flex-direction: row;
+    gap: 8px;
+    height: clamp(34px, 10vh, 48px);
+  }
 }
 
 .pivot-warning {

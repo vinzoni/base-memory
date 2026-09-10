@@ -410,9 +410,13 @@ Requisiti minimi di qualità:
 > binario a 5 cifre entra nella cella senza che nessuna tessera reclami spazio
 > extra. Tornerebbe se un livello o un ciclo futuro alzasse di nuovo il range.
 
-> **Limite noto:** il layout non si adatta bene agli schermi di telefono. I
-> colori e l'audio funzionano correttamente; il problema è la disposizione degli
-> elementi. Da affrontare dopo il completamento della versione web.
+> **Limite noto:** su una griglia 6x6 (Livelli 11–13), sotto i ~340px di
+> larghezza dello schermo, i numeri delle tessere scendono sotto i 14px. È il
+> limite di leggibilità che il layout mobile non sacrifica: sotto quella soglia
+> il tavolo resta tutto visibile senza scorrimento, ma i numeri del 6x6
+> diventano troppo piccoli. Le griglie più piccole e gli schermi più larghi non
+> sono interessati. Su un telefono comune (~390px) i numeri del 6x6 stanno
+> intorno ai 15–16px.
 
 ---
 
