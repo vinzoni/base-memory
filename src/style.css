@@ -516,6 +516,21 @@ code {
   gap: 2px;
 }
 
+/* Riga leggera prima del modulo nome: solo il dato che serve per decidere se
+   registrarsi, non il riquadro con icona di .summary-screen__stat — quello
+   spingerebbe il modulo fuori dallo schermo su un telefono in orizzontale. */
+.summary-screen__score-preview {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-h);
+  line-height: 1.3;
+
+  strong {
+    font-family: var(--mono);
+    color: var(--accent);
+  }
+}
+
 .summary-screen__highscore-form {
   width: 100%;
   display: flex;
@@ -543,12 +558,40 @@ code {
   color: var(--accent);
 }
 
-.summary-screen__actions,
-.high-scores-screen__actions {
+.summary-screen__actions {
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
   gap: 12px;
+}
+
+/* Nessuna larghezza esplicita sul contenitore: a colonna, la sua larghezza
+   intrinseca è quella del figlio più largo ("Azzerra classifica"), e
+   align-items: stretch — il default per i figli di un contenitore flex —
+   allarga anche l'altro pulsante alla stessa misura. Stessa uniformità di
+   .config-screen (275835a), senza però forzare i pulsanti alla larghezza
+   dell'intera tabella dei punteggi. */
+.high-scores-screen__actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Schermo piccolo: telefono in verticale, o in orizzontale dove l'altezza è
+   poca (stesso breakpoint del tavolo di gioco, src/style.css:889). Quando il
+   punteggio entra in classifica, tutto quello che precede il modulo nome —
+   padding, intestazione, riga di anteprima — deve lasciare il modulo visibile
+   senza scorrere: qui si stringono i margini attorno, non le statistiche
+   (già spostate sotto, non più sulla via). */
+@media (max-width: 500px), (max-height: 520px) and (max-width: 900px) {
+  .summary-screen {
+    padding: 16px 16px;
+    gap: 14px;
+  }
+
+  .summary-screen__highscore-form {
+    gap: 8px;
+  }
 }
 
 .high-scores-screen {

@@ -29,6 +29,21 @@ function buildStat(iconName, label, value) {
   return wrapper;
 }
 
+// Riga leggera, non il riquadro con icona di buildStat: prima del modulo
+// nome serve solo il dato che decide se registrarsi, non l'intero pannello
+// (SPECIFICHE.md e verifica su telefono in orizzontale — il pannello intero
+// spingerebbe il modulo sotto la piega).
+function buildScorePreview(score) {
+  const preview = document.createElement('p');
+  preview.className = 'summary-screen__score-preview';
+
+  const value = document.createElement('strong');
+  value.textContent = String(score);
+
+  preview.append('Punteggio finale: ', value);
+  return preview;
+}
+
 function buildHighScoreForm(state, onSaveScore) {
   const form = document.createElement('form');
   form.className = 'summary-screen__highscore-form';
@@ -81,20 +96,26 @@ export function renderSummaryScreen(container, { state, level, qualifies, onSave
   section.appendChild(heading);
 
   const totalPairCount = state.tiles.length / 2;
-  const stats = document.createElement('dl');
-  stats.className = 'summary-screen__stats';
-  stats.append(
-    buildStat('score', 'Punteggio finale', String(state.score)),
+  const otherStats = [
     buildStat('level', 'Livello raggiunto', level.name),
     buildStat('time', 'Tempo impiegato', formatTime(getTotalElapsedSeconds(state, Date.now()))),
     buildStat('pairs', 'Coppie risolte', `${state.resolvedPairIds.length}/${totalPairCount}`),
-    buildStat('errors', 'Errori', String(state.errorCount))
-  );
-  section.appendChild(stats);
+    buildStat('errors', 'Errori', String(state.errorCount)),
+  ];
+
+  const stats = document.createElement('dl');
+  stats.className = 'summary-screen__stats';
 
   if (qualifies) {
+    // Il punteggio è già anticipato sopra il modulo: qui non va duplicato.
+    section.appendChild(buildScorePreview(state.score));
     section.appendChild(buildHighScoreForm(state, onSaveScore));
+    stats.append(...otherStats);
+  } else {
+    stats.append(buildStat('score', 'Punteggio finale', String(state.score)), ...otherStats);
   }
+
+  section.appendChild(stats);
 
   const actions = document.createElement('div');
   actions.className = 'summary-screen__actions';
