@@ -86,9 +86,9 @@ export function renderHighScoresScreen(container, { scores, onBack, onClear }) {
     const clearButton = document.createElement('button');
     clearButton.type = 'button';
     clearButton.className = 'screen-secondary-button';
-    clearButton.textContent = 'Azzerra classifica';
+    clearButton.textContent = 'Azzera classifica';
     clearButton.addEventListener('click', () => {
-      if (window.confirm("Azzerrare la classifica? L'operazione non è reversibile.")) {
+      if (window.confirm("Azzerare la classifica? L'operazione non è reversibile.")) {
         onClear();
       }
     });
