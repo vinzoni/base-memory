@@ -468,6 +468,10 @@ code {
 }
 
 .summary-screen__stats {
+  /* Come .config-screen__bases: con border-box la width 100% comprende
+     padding e bordo, così il pannello resta largo quanto il modulo nome e i
+     pulsanti invece di sforare i margini laterali della schermata. */
+  box-sizing: border-box;
   width: 100%;
   display: flex;
   flex-direction: column;
@@ -558,19 +562,13 @@ code {
   color: var(--accent);
 }
 
-.summary-screen__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 12px;
-}
-
 /* Nessuna larghezza esplicita sul contenitore: a colonna, la sua larghezza
-   intrinseca è quella del figlio più largo ("Azzerra classifica"), e
+   intrinseca è quella del figlio più largo ("Gioca ancora"), e
    align-items: stretch — il default per i figli di un contenitore flex —
    allarga anche l'altro pulsante alla stessa misura. Stessa uniformità di
    .config-screen (275835a), senza però forzare i pulsanti alla larghezza
    dell'intera tabella dei punteggi. */
+.summary-screen__actions,
 .high-scores-screen__actions {
   display: flex;
   flex-direction: column;
