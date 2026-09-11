@@ -27,8 +27,8 @@ const STRUCK_TAIL_FACTOR = 5; // costanti di tempo di decadimento prima di ferma
 
 // Seconda voce sovrapposta a ogni nota, un'ottava sopra e a volume ridotto: dà
 // spessore al timbro senza cambiare la nota percepita. Per i suoni "struck" è
-// più tenue e sempre `triangle`: rinforzo armonico dolce sopra un fondamentale
-// brillante, senza stridere.
+// più tenue e sempre `triangle`: rinforzo armonico dolce sopra il
+// fondamentale, timbro discreto, senza stridere.
 const OCTAVE_MIX = 0.28;
 const STRUCK_OCTAVE_MIX = 0.16;
 
@@ -63,23 +63,29 @@ const STRUCK_SOUNDS = new Set(['pairMatch', 'levelComplete']);
 // sostegno prima del rilascio, `releaseScale` accorcia la coda. Per i suoni
 // "struck": `decay` è la costante di tempo del decadimento.
 const SOUND_SEQUENCES = {
-  // Campanello squillante: din-don, attacco istantaneo e coda che decade. Onda
-  // `square` (più ricca di armoniche di `triangle`, carattere arcade) sul
-  // fondamentale, con un passa-basso a ~2.6 kHz che toglie l'asprezza stridula
-  // dell'onda quadra a volume pieno lasciando l'attacco brillante. Due note
-  // nitide, la seconda più acuta (Mi4 -> Si4, quinta): un'ottava sotto la
-  // versione precedente, che stava dove l'orecchio è più sensibile e affaticava
-  // sulle dodici ripetizioni per livello.
+  // Campanello morbido: din-don, attacco istantaneo e coda che decade.
+  // Quarto tentativo su questo suono, e cambio di approccio invece
+  // dell'ennesimo ritocco: sinusoide pura sul fondamentale — nessuna armonica
+  // propria, quindi nulla da filtrare — con la sola ottava del motore
+  // "struck" (`triangle`, volume ridotto: STRUCK_OCTAVE_MIX) a fare da unica
+  // armonica aggiunta. Meno arcade della precedente onda quadra, ma è il
+  // suono che il giocatore sente più di ogni altro (dieci o più volte per
+  // livello): qui la gradevolezza conta più del carattere. Due note nitide,
+  // la seconda più acuta (Mi4 -> Si4, quinta), invariate dal tentativo
+  // precedente.
   pairMatch: [
-    { frequency: 329.63, type: 'square', startAt: 0, decay: 0.11, gain: 0.42, lowpassHz: 2600 },
-    { frequency: 493.88, type: 'square', startAt: 0.12, decay: 0.17, gain: 0.42, lowpassHz: 2600 },
+    { frequency: 329.63, type: 'sine', startAt: 0, decay: 0.11, gain: 0.42 },
+    { frequency: 493.88, type: 'sine', startAt: 0.12, decay: 0.17, gain: 0.42 },
   ],
-  // Due note discendenti ravvicinate, sinusoide morbida a volume ridotto: il
-  // suono che si sente più spesso mentre si impara, non deve diventare
-  // fastidioso alla quinta volta. È il riferimento di misura per gli altri.
+  // Due note discendenti ravvicinate, sinusoide morbida: il suono che si
+  // sente più spesso mentre si impara, non deve diventare fastidioso alla
+  // quinta volta. Gain alzato rispetto alle prime versioni: a queste
+  // frequenze una sinusoide, priva di armoniche, si percepisce molto più
+  // debole delle altre voci a parità di gain nominale — su altoparlante di
+  // telefono risultava appena udibile.
   pairError: [
-    { frequency: 246.94, type: 'sine', startAt: 0, duration: 0.14, gain: 0.5, releaseScale: 0.5 },
-    { frequency: 196.0, type: 'sine', startAt: 0.06, duration: 0.18, gain: 0.5, releaseScale: 0.5 },
+    { frequency: 246.94, type: 'sine', startAt: 0, duration: 0.14, gain: 0.85, releaseScale: 0.5 },
+    { frequency: 196.0, type: 'sine', startAt: 0.06, duration: 0.18, gain: 0.85, releaseScale: 0.5 },
   ],
   // Allarme a tre tempi: tre impulsi uguali, pausa, altri tre, pausa, altri tre.
   // La ripetizione e il ritmo comunicano urgenza; volume medio e onda pulita
