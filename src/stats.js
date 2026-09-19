@@ -1,4 +1,14 @@
+import { BASES } from './core/bases.js';
 import { STATS_ENDPOINT_URL } from './config.js';
+
+// Stesso ordine con cui le basi sono definite in core/bases.js: garantisce che
+// la stessa combinazione di basi produca sempre la stessa stringa, indipendentemente
+// dall'ordine in cui il giocatore le ha selezionate in configurazione.
+const CANONICAL_BASE_ORDER = Object.keys(BASES);
+
+function canonicalBasesLabel(selectedBases) {
+  return CANONICAL_BASE_ORDER.filter((baseId) => selectedBases.includes(baseId)).join('+');
+}
 
 function sendStatsEvent(params) {
   try {
@@ -19,6 +29,11 @@ export function reportPageOpened() {
   sendStatsEvent({ evento: 'apertura' });
 }
 
-export function reportGameFinished({ score, levelReached }) {
-  sendStatsEvent({ evento: 'partita', punteggio: score, livello: levelReached });
+export function reportGameFinished({ score, levelReached, selectedBases }) {
+  sendStatsEvent({
+    evento: 'partita',
+    punteggio: score,
+    livello: levelReached,
+    basi: canonicalBasesLabel(selectedBases),
+  });
 }

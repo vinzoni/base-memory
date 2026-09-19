@@ -31,10 +31,10 @@ export const MAX_HIGH_SCORES = 10;
 export const MAX_PLAYER_NAME_LENGTH = 20;
 
 // Endpoint di un Google Apps Script che registra due eventi anonimi (apertura
-// pagina, fine partita con punteggio e livello raggiunto) in un foglio Google.
-// Nessun identificativo del giocatore, nessun cookie. Rimuovibile in qualsiasi
-// momento senza alcuna conseguenza sul gioco: main.js gestisce il fallimento
-// dell'invio in modo completamente silenzioso.
+// pagina, fine partita con punteggio, livello raggiunto e basi selezionate) in
+// un foglio Google. Nessun identificativo del giocatore, nessun cookie.
+// Rimuovibile in qualsiasi momento senza alcuna conseguenza sul gioco: main.js
+// gestisce il fallimento dell'invio in modo completamente silenzioso.
 export const STATS_ENDPOINT_URL =
   'https://script.google.com/macros/s/AKfycbz_oh24ONHOKXzviNJ8UslhikMizuPbs3QzWaXF3ohWaGfUNXbmRnEwvvciSo4gURyT/exec';
 

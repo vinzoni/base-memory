@@ -437,10 +437,13 @@ dove arrivano i giocatori:
 1. **Apertura pagina**: una chiamata all'avvio, parametro `evento=apertura`.
 2. **Partita conclusa**: una chiamata sola per partita (non per livello), qualunque
    sia l'esito — vittoria, timeout o abbandono. Parametri: `evento=partita`,
-   `punteggio` (punteggio finale), `livello` (livello raggiunto).
+   `punteggio` (punteggio finale), `livello` (livello raggiunto), `basi` (basi
+   selezionate, in ordine canonico DEC, BIN, OCT, HEX e unite da `+`: la stessa
+   combinazione produce sempre la stessa stringa a prescindere dall'ordine di
+   selezione, es. `DEC+BIN` sia partendo da DEC sia da BIN).
 
-Non vengono raccolti: identificativi del giocatore, cookie, basi selezionate,
-durata della partita o qualsiasi altro dato oltre ai due elencati sopra.
+Non vengono raccolti: identificativi del giocatore, cookie, durata della
+partita o qualsiasi altro dato oltre a quelli elencati sopra.
 
 L'invio è non bloccante e a prova di endpoint irraggiungibile: in caso di rete
 assente o endpoint lento/rimosso il gioco si comporta esattamente come se la

@@ -310,7 +310,7 @@ function showLevelCompleteScreen(selectedBases, state, nextLevel) {
 function showSummaryScreen(selectedBases, state) {
   // Unico punto raggiunto da tutti gli esiti di fine partita (vittoria, timeout,
   // abbandono): garantisce una sola chiamata per partita, non per livello.
-  reportGameFinished({ score: state.score, levelReached: state.levelId });
+  reportGameFinished({ score: state.score, levelReached: state.levelId, selectedBases });
 
   const currentScores = getHighScores();
   const qualifies = qualifiesForHighScore(currentScores, state.score);
