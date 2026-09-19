@@ -29,6 +29,7 @@ import {
   qualifiesForHighScore,
   readHighScores,
 } from './storage/highScores.js';
+import { reportGameFinished, reportPageOpened } from './stats.js';
 
 const FIRST_LEVEL = getLevelById(1);
 // Non deve dipendere dal solo Livello 1: se in futuro il vincolo pivot si spostasse
@@ -307,6 +308,10 @@ function showLevelCompleteScreen(selectedBases, state, nextLevel) {
 }
 
 function showSummaryScreen(selectedBases, state) {
+  // Unico punto raggiunto da tutti gli esiti di fine partita (vittoria, timeout,
+  // abbandono): garantisce una sola chiamata per partita, non per livello.
+  reportGameFinished({ score: state.score, levelReached: state.levelId });
+
   const currentScores = getHighScores();
   const qualifies = qualifiesForHighScore(currentScores, state.score);
   const level = getLevelById(state.levelId);
@@ -382,4 +387,5 @@ function showSplashScreen() {
   );
 }
 
+reportPageOpened();
 showSplashScreen();

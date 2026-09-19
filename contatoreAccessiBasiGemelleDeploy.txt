@@ -1,0 +1,39 @@
+Deployment id
+AKfycbz_oh24ONHOKXzviNJ8UslhikMizuPbs3QzWaXF3ohWaGfUNXbmRnEwvvciSo4gURyT
+
+URL
+https://script.google.com/macros/s/AKfycbz_oh24ONHOKXzviNJ8UslhikMizuPbs3QzWaXF3ohWaGfUNXbmRnEwvvciSo4gURyT/exec
+
+/plan Aggiungi la raccolta di dati statistici anonimi sull'uso del gioco.
+
+Obiettivo: sapere quante volte il gioco viene aperto e fin dove arrivano i
+giocatori. Nessun identificativo, nessun cookie, nessun dato sul giocatore.
+
+I dati vengono inviati a un endpoint Google Apps Script che li registra in
+un foglio. L'indirizzo è:
+https://script.google.com/macros/s/AKfycbz_oh24ONHOKXzviNJ8UslhikMizuPbs3QzWaXF3ohWaGfUNXbmRnEwvvciSo4gURyT/exec
+
+Due eventi da registrare:
+1. apertura della pagina — una sola chiamata all'avvio, senza parametri;
+2. partita conclusa — sia per vittoria, sia per tempo scaduto, sia per
+   abbandono. Parametri: evento=partita, punteggio finale, livello raggiunto.
+   Una sola chiamata per partita, non per livello.
+
+Requisiti tecnici:
+- fetch in modalità no-cors: la risposta non serve e Apps Script non espone
+  gli header CORS, quindi una fetch normale fallirebbe;
+- completamente non bloccante e in try/catch: se l'endpoint è lento o
+  irraggiungibile, il gioco deve comportarsi esattamente come se non ci
+  fosse. Non attendere l'esito, non mostrare errori al giocatore, non
+  ritardare l'avvio né il passaggio alla schermata di riepilogo;
+- l'indirizzo va in config.js come costante nominata, con un commento che
+  spieghi cosa invia e che è rimovibile senza conseguenze per il gioco;
+- nessun altro dato: niente basi selezionate, niente durata, niente
+  identificativi di alcun tipo.
+
+L'invio è un fatto di presentazione: gameEngine e gli altri moduli di
+src/core/ non devono saperne nulla. È main.js, che già osserva le
+transizioni finali e il bootstrap, a occuparsene.
+
+Aggiungi in SPECIFICHE.md una nota che documenta cosa viene registrato e
+cosa no.

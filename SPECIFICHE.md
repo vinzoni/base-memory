@@ -425,3 +425,23 @@ Requisiti minimi di qualità:
 - Backend, account, classifica online.
 - Animazioni elaborate, temi grafici multipli.
 - Internazionalizzazione: la UI è in italiano.
+
+---
+
+## 9. Statistiche di utilizzo anonime
+
+Il gioco invia due eventi anonimi a un endpoint Google Apps Script (registrato in
+`config.js` come `STATS_ENDPOINT_URL`), per sapere quante volte viene aperto e fin
+dove arrivano i giocatori:
+
+1. **Apertura pagina**: una chiamata all'avvio, parametro `evento=apertura`.
+2. **Partita conclusa**: una chiamata sola per partita (non per livello), qualunque
+   sia l'esito — vittoria, timeout o abbandono. Parametri: `evento=partita`,
+   `punteggio` (punteggio finale), `livello` (livello raggiunto).
+
+Non vengono raccolti: identificativi del giocatore, cookie, basi selezionate,
+durata della partita o qualsiasi altro dato oltre ai due elencati sopra.
+
+L'invio è non bloccante e a prova di endpoint irraggiungibile: in caso di rete
+assente o endpoint lento/rimosso il gioco si comporta esattamente come se la
+funzionalità non esistesse (nessun ritardo, nessun errore visibile).
